@@ -1,0 +1,11 @@
+*__pycache__/
+*.vscode/
+*.egg-info/
+dist/
+build/
+
+logs/
+dataset/
+checkpoints/
+
+nohup.out

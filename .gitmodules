@@ -1,0 +1,3 @@
+[submodule "degmo"]
+	path = degmo
+	url = https://github.com/IcarusWizard/Deep-Generative-Models
