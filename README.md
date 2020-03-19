@@ -9,4 +9,6 @@ cd GEM
 cd degmo
 pip install -e .
 cd .. 
+# Install other dependencies
+pip install -r requirement.txt
 ```
