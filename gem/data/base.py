@@ -119,7 +119,7 @@ class ImageDataset(torch.utils.data.Dataset):
         while not q.empty():
             folder = q.get()
             for file_name in os.listdir(folder):
-                if os.path.isdir(file_name):
+                if os.path.isdir(os.path.join(folder, file_name)):
                     q.put(os.path.join(folder, file_name)) # add subfolder
                 else:
                     if check_keys(file_name, keys):

@@ -5,11 +5,15 @@ import torchvision
 from multiprocessing import Pool
 from google.protobuf.json_format import MessageToDict
 import pickle, os, re, time
+from functools import partial
 
 from .utils import get_unpack_functions
 from .base import ImageDataset
 
-def load_bair_push(keys=[''], normalize=False):
+def load_bair_push(keys=['image_main'], normalize=False):
+    """
+        keys : list[str], options : image_main, image_aux1
+    """
     ROOT = 'dataset/bair_push/'
     TF_PATH = os.path.join(ROOT, 'tfrecords')
     BUILD_PATH = os.path.join(ROOT, 'build')
@@ -124,45 +128,12 @@ class BairConverter(object):
         print('-' * 50)
         with open(os.path.join(self.output_path, 'config.pkl'), 'wb') as f:
             pickle.dump(config, f)
-        
-    def parser(self, traj):
-        example = tf.train.Example()
-        example.ParseFromString(traj)
-        feature = example.features.feature
-        dict_data = dict()
-        for key, func in zip(self.keys, self.functions):
-            list_data = []
-            for i in range(self.sequence_size):
-                raw = func(feature[('%d' % i) + key])
-                if 'image' in key:
-                    image_flatten = np.array([b for b in raw[0]], dtype=np.uint8)
-                    data = image_flatten.reshape(self.image_shape)
-                else:
-                    data = np.array(raw)
-                list_data.append(data[np.newaxis])
-            dict_data[key] = np.concatenate(list_data, axis=0)
-        return dict_data
 
-    def convert_single(self, input_traj, output_folder):
-        traj_name = input_traj.split('/')[-1]
-        index = min(map(int, re.findall(r'(\d+)', traj_name)))
-        record = tf.python_io.tf_record_iterator(input_traj)
-        for traj in record:
-            dict_data = self.parser(traj)
-            target_folder = os.path.join(output_folder, 'traj_{}'.format(index))
-            if not os.path.exists(target_folder):
-                os.makedirs(target_folder)
-            for key, value in dict_data.items():
-                if 'image' in key:
-                    for i in range(value.shape[0]):
-                        plt.imsave(os.path.join(target_folder, '{}_{}.jpg'.format(key[1:].split('/')[0], i)), value[i])
-                else:
-                    np.savetxt(os.path.join(target_folder, '{}.txt'.format(key[1:])), value)
-            index += 1
-            print('traj {} is finished!'.format(index)) 
+        self.parser = partial(_parse, keys=self.keys, functions=self.functions, sequence_size=self.sequence_size, image_shape=self.image_shape)
     
     def convert(self):
         self.check_config()
+        pool = Pool(os.cpu_count())
         for dataset in self.datasets:
             print('-' * 50)
             print('In dataset {}'.format(dataset))
@@ -172,23 +143,50 @@ class BairConverter(object):
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)
             filenames = sorted(os.listdir(input_folder))
-            count = 0
-            for filename in filenames:
-                record = tf.python_io.tf_record_iterator(os.path.join(input_folder, filename))
-                for traj in record:
-                    start_time = time.time()
-                    dict_data = self.parser(traj)
 
-                    # save trajectory separately, with each image a jpg file and other property a txt file
-                    target_folder = os.path.join(output_folder, 'traj_{}'.format(count))
-                    if not os.path.exists(target_folder):
-                        os.makedirs(target_folder)
-                    for key, value in dict_data.items():
-                        if 'image' in key:
-                            for i in range(value.shape[0]):
-                                plt.imsave(os.path.join(target_folder, '{}_{}.jpg'.format(key[1:].split('/')[0], i)), value[i])
-                        else:
-                            np.savetxt(os.path.join(target_folder, '{}.txt'.format(key[1:])), value)
-                    
-                    count += 1 
-                    print('%d sample using time: %f ms' % (count, time.time() - start_time))
+            processes = []
+            for filename in filenames:
+                p = pool.apply_async(convert_single, (os.path.join(input_folder, filename), output_folder, self.parser))
+                processes.append(p)
+
+            for p in processes:
+                p.get()
+
+        pool.close()
+        pool.join()
+
+def _parse(traj, keys, functions, sequence_size, image_shape):
+    example = tf.train.Example()
+    example.ParseFromString(traj)
+    feature = example.features.feature
+    dict_data = dict()
+    for key, func in zip(keys, functions):
+        list_data = []
+        for i in range(sequence_size):
+            raw = func(feature[('%d' % i) + key])
+            if 'image' in key:
+                image_flatten = np.array([b for b in raw[0]], dtype=np.uint8)
+                data = image_flatten.reshape(image_shape)
+            else:
+                data = np.array(raw)
+            list_data.append(data[np.newaxis])
+        dict_data[key] = np.concatenate(list_data, axis=0)
+    return dict_data
+
+def convert_single(input_traj, output_folder, parser):
+    traj_name = input_traj.split('/')[-1]
+    index = min(map(int, re.findall(r'(\d+)', traj_name)))
+    record = tf.python_io.tf_record_iterator(input_traj)
+    for traj in record:
+        dict_data = parser(traj)
+        target_folder = os.path.join(output_folder, 'traj_{}'.format(index))
+        if not os.path.exists(target_folder):
+            os.makedirs(target_folder)
+        for key, value in dict_data.items():
+            if 'image' in key:
+                for i in range(value.shape[0]):
+                    plt.imsave(os.path.join(target_folder, '{}_{}.jpg'.format(key[1:].split('/')[0], i)), value[i])
+            else:
+                np.savetxt(os.path.join(target_folder, '{}.txt'.format(key[1:])), value)
+        index += 1
+        print('traj {} is finished!'.format(index)) 
