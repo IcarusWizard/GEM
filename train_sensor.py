@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import torch, torchvision
 
 import os, argparse
-from tqdm import tqdm
 
 import degmo
 from degmo.vae.run_utils import config_model_train

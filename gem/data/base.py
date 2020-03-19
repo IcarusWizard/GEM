@@ -3,6 +3,7 @@ import os
 import PIL
 from queue import Queue
 
+import torch, torchvision
 from .utils import check_keys
 
 # class VideoDataset(torch.utils.data.Dataset):
