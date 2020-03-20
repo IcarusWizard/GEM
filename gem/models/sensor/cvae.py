@@ -6,6 +6,8 @@ from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
 from degmo.vae.utils import get_kl, LOG2PI
 from degmo.vae.trainer import VAETrainer
 
+from .utils import get_kl_2normal
+
 class CVAE(torch.nn.Module):
     r"""
         VAE with consistent loss
@@ -77,9 +79,7 @@ class CVAE(torch.nn.Module):
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
 
         _mu, _logs = torch.chunk(self.encoder(_x), 2, dim=1)
-        normal = torch.distributions.Normal(mu, torch.exp(logs))
-        _normal = torch.distributions.Normal(_mu, torch.exp(_logs))
-        consistent_loss = torch.mean(torch.sum(torch.distributions.kl_divergence(_normal, normal), dim=1))
+        consistent_loss = torch.mean(torch.sum(get_kl_2normal(_mu, _logs, mu, logs), dim=1))
         
         return kl + reconstruction_loss + consistent_loss, {
             "KL divergence" : kl.item(),
