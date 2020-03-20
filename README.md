@@ -1,4 +1,6 @@
 # General Intelligent Machine (GEM)
+## Overview
+![avatar](./pic/gem.png)
 ## Setup
 Recommend to setup with Anaconda
 ```bash
@@ -11,4 +13,7 @@ pip install -e .
 cd .. 
 # Install other dependencies
 pip install -r requirement.txt
+# Reinstall tensorboard
+pip unistall tb-nightly tensorboard
+pip install tb-nightly
 ```
