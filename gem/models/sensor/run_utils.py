@@ -32,7 +32,7 @@ def config_model_train(config, model_param):
         else:
             model_param['config']['res_layers'] = config['res_layers']
 
-    if config['model']== 'VAE' or config['model'] == 'CVAE':
+    if config['model']== 'VAE' or config['model'] == 'CVAE' or config['model'] == 'AVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
             "output_type" : config['output_type'],
@@ -42,9 +42,11 @@ def config_model_train(config, model_param):
 
         if config['model']== 'VAE':
             model = VAE(**model_param)
-        else:
+        elif config['model'] == 'CVAE':
             model = CVAE(**model_param)
-            
+        elif config['model'] == 'AVAE':
+            model = AVAE(**model_param)
+
     elif config['model']== 'FVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],

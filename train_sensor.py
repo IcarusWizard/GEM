@@ -36,17 +36,18 @@ if __name__ == '__main__':
     model_parser.add_argument('--k', type=int, default=512)
     model_parser.add_argument('--d', type=int, default=64)
     model_parser.add_argument('--beta', type=float, default=0.25)
-    model_parser.add_argument('--flow_features', type=int, default=64)
-    model_parser.add_argument('--flow_hidden_layers', type=int, default=3)
-    model_parser.add_argument('--flow_num_transformation', type=int, default=3)
+    model_parser.add_argument('--flow_features', type=int, default=1024)
+    model_parser.add_argument('--flow_hidden_layers', type=int, default=4)
+    model_parser.add_argument('--flow_num_transformation', type=int, default=8)
+    model_parser.add_argument('--n_critic', type=int, default=1)
 
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
-    train_parser.add_argument('--batch_size', type=int, default=256)
+    train_parser.add_argument('--batch_size', type=int, default=32)
     train_parser.add_argument('--gpu', type=str, default='0')
     train_parser.add_argument('--workers', type=int, default=9999,
                               help='how many workers use for dataloader, default is ALL')
-    train_parser.add_argument('--steps', type=int, default=30000)
+    train_parser.add_argument('--steps', type=int, default=100000)
     train_parser.add_argument('--lr', type=float, default=1e-3)
     train_parser.add_argument('--beta1', type=float, default=0.9)
     train_parser.add_argument('--beta2', type=float, default=0.999)
@@ -63,6 +64,7 @@ if __name__ == '__main__':
     seed = args.seed if args.seed else np.random.randint(0, 100000)
     setup_seed(seed) 
     config['seed'] = seed
+    print('using seed {}'.format(seed))
 
     # create output folder
     if not os.path.exists(LOGDIR):

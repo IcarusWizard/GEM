@@ -3,12 +3,13 @@ from torch.functional import F
 import numpy as np
 
 from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
+from degmo.gan.modules import ResDiscriminator
 from degmo.vae.utils import get_kl, LOG2PI
-from degmo.vae.trainer import VAETrainer
+from .trainer import AVAETrainer
 
 from .utils import get_kl_2normal
 
-class CVAE(torch.nn.Module):
+class AVAE(torch.nn.Module):
     r"""
         VAE with consistent loss
         
@@ -24,20 +25,22 @@ class CVAE(torch.nn.Module):
             use_mce : bool, whether to compute KL by Mento Carlo Estimation, default: False
     """
     def __init__(self, c=3, h=32, w=32, latent_dim=2, network_type='conv', config={}, 
-                 output_type='gauss', use_mce=False):
+                 output_type='fix_std', use_mce=False):
         super().__init__()
         self.latent_dim = latent_dim
         self.output_type = output_type
         self.use_mce = use_mce
         self.input_dim = c * h * w
-        output_c = 2 * c if self.output_type == 'gauss' else c
 
-        if network_type == 'mlp':
-            self.encoder = MLPEncoder(c, h, w, latent_dim, **config)
-            self.decoder = MLPDecoder(output_c, h, w, latent_dim, **config)
-        elif network_type == 'conv':
+        assert output_type == 'fix_std', "AVAE only supply fix_std now"
+        assert network_type == 'conv', "AVAE only supply conv now"
+        output_c = c
+
+        if network_type == 'conv':
             self.encoder = ConvEncoder(c, h, w, latent_dim, **config)
             self.decoder = ConvDecoder(output_c, h, w, latent_dim, **config)
+            self.discriminator = ResDiscriminator(c, h, w, features=config['conv_features'], hidden_layers=2)
+            self.criterion = torch.nn.BCEWithLogitsLoss()
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
         
@@ -60,27 +63,14 @@ class CVAE(torch.nn.Module):
 
         _x = self.decoder(z)
 
-        # compute reconstruction loss
-        if self.output_type == 'fix_std':
-            # output is a gauss with a fixed 1 variance,
-            # reconstruction loss is mse plus constant
-            reconstruction_loss = (x - _x) ** 2 / 2 + LOG2PI
-
-            _x = _x
-
-        elif self.output_type == 'gauss':
-            # output is a gauss with diagonal variance
-            _mu, _logs = torch.chunk(_x, 2, dim=1)
-            _logs = torch.tanh(_logs)
-            reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
-
-            _x = _mu
-
         kl = torch.mean(kl)
-        reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+
+        fake_logit = self.discriminator(_x)
+        fake_label = torch.ones_like(fake_logit)
+        reconstruction_loss = self.criterion(fake_logit, fake_label) * np.prod(x.shape[1:])
 
         _mu, _logs = torch.chunk(self.encoder(_x), 2, dim=1)
-        _logs = torch.clamp_max(_logs, 10)
+        _logs = torch.clamp_max(_logs, 10) # limit the max logs, prevent inf in kl
         consistent_loss = torch.mean(torch.sum(get_kl_2normal(_mu, _logs, mu, logs), dim=1))
         
         return kl + reconstruction_loss + consistent_loss, {
@@ -88,6 +78,24 @@ class CVAE(torch.nn.Module):
             "reconstruction loss" : reconstruction_loss.item(),
             'consistent loss' : consistent_loss.item()
         }
+
+    def get_discriminator_loss(self, x):
+        mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
+        logs = torch.clamp_max(logs, 10) # limit the max logs, prevent inf in kl
+
+        # reparameterize trick
+        epsilon = torch.randn_like(logs)
+        z = mu + epsilon * torch.exp(logs)
+
+        _x = self.decoder(z)
+
+        real_logit = self.discriminator(x)
+        fake_logit = self.discriminator(_x)
+
+        fake_label = torch.zeros_like(fake_logit)
+        real_label = torch.ones_like(real_logit)
+
+        return (self.criterion(real_logit, real_label) + self.criterion(fake_logit, fake_label)) * np.prod(x.shape[1:])
     
     def encode(self, x):
         mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
@@ -97,17 +105,9 @@ class CVAE(torch.nn.Module):
     def decode(self, z, deterministic=True):
         _x = self.decoder(z)
 
-        if self.output_type == 'fix_std':
-            x = _x
-            if not deterministic:
-                x = x + torch.randn_like(x)
-
-        elif self.output_type == 'gauss':
-            _mu, _logs = torch.chunk(_x, 2, dim=1)
-            _logs = torch.tanh(_logs)
-            x = _mu
-            if not deterministic:
-                x = x + torch.exp(_logs) * torch.randn_like(x)
+        x = _x
+        if not deterministic:
+            x = x + torch.randn_like(x)
 
         return x
 
@@ -119,4 +119,4 @@ class CVAE(torch.nn.Module):
         return self.decode(z, deterministic=deterministic)
 
     def get_trainer(self):
-        return VAETrainer
+        return AVAETrainer
