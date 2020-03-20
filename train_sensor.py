@@ -5,7 +5,7 @@ import torch, torchvision
 import os, argparse
 
 import degmo
-from degmo.vae.run_utils import config_model_train
+from gem.sensor.run_utils import config_model_train
 from degmo.utils import setup_seed, nats2bits, config_dataset
 
 from gem import data

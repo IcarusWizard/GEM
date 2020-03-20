@@ -1,4 +1,5 @@
 tensorflow==1.14
+numpy==1.16.0
 ray
 ray[tune]
 gym
