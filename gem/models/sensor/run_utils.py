@@ -40,7 +40,11 @@ def config_model_train(config, model_param):
             "output_type" : config['output_type'],
         })       
 
-        model = VAE(**model_param)   
+        if config['model']== 'VAE':
+            model = VAE(**model_param)
+        else:
+            model = CVAE(**model_param)
+            
     elif config['model']== 'FVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
