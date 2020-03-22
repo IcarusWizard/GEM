@@ -66,7 +66,7 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
         output = {}
 
         # load obs
-        key, filetype = self.key['obs']
+        key, filetype = self.keys['obs']
         if filetype == 'image':
             # first find the suffix
             for filename in files:
