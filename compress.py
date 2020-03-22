@@ -60,9 +60,10 @@ if __name__ == '__main__':
             data = dataset[i]
 
             obs = data['obs']
+            obs = obs.to(device)
             z = model.encode(obs)
 
-            pickle_data(z.numpy(), os.path.join(traj_folder, 'obs.pkl'))
+            pickle_data(z.cpu().numpy(), os.path.join(traj_folder, 'obs.pkl'))
 
             action = data['action']
             if action is not None:
