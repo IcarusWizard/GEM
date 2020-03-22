@@ -69,3 +69,24 @@ def config_model_train(config, model_param):
         raise ValueError('Model {} is not supported!'.format(config['model']))
 
     return model, model_param
+
+def get_model_by_checkpoint(checkpoint):
+    state_dict = checkpoint['model_state_dict']
+    model_param = checkpoint['model_param']
+    name = checkpoint['config']['model']
+
+    if name == 'VAE':
+        model = VAE(**model_param)
+    elif name == 'FVAE':
+        model = FVAE(**model_param)
+    elif name == 'VQ-VAE':
+        model = VQ_VAE(**model_param)
+    elif name == 'CVAE':
+        model = CVAE(**model_param)
+    elif name == 'AVAE':
+        model == AVAE(**model_param)
+
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    return model

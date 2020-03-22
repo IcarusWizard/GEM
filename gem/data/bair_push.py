@@ -8,7 +8,7 @@ import pickle, os, re, time
 from functools import partial
 
 from .utils import get_unpack_functions
-from .base import ImageDataset
+from .base import ImageDataset, ActionSequenceDataset
 
 def load_bair_push(keys=['image_main'], normalize=False):
     """
@@ -39,6 +39,25 @@ def load_bair_push(keys=['image_main'], normalize=False):
     trainset = ImageDataset(os.path.join(BUILD_PATH, 'train'), keys, transform)
     valset = ImageDataset(os.path.join(BUILD_PATH, 'val'), keys, transform)
     testset = ImageDataset(os.path.join(BUILD_PATH, 'test'), keys, transform)
+
+    return (trainset, valset, testset, config)
+
+def load_bair_push_seq(keys={"obs" : ("image_main", 'image'), "action" : ('action', 'txt'), 'reward' : None}, horizon=30, fix_start=True):
+    ROOT = 'dataset/bair_push/'
+    TF_PATH = os.path.join(ROOT, 'tfrecords')
+    BUILD_PATH = os.path.join(ROOT, 'build')
+
+    max_length = 30
+
+    config = {
+        "obs" : (3, 64, 64),
+        "action" : 4,
+        'reward' : None,
+    }
+
+    trainset = ActionSequenceDataset(BUILD_PATH, 'train', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
+    valset = ActionSequenceDataset(BUILD_PATH, 'val', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
+    testset = ActionSequenceDataset(BUILD_PATH, 'test', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
 
     return (trainset, valset, testset, config)
 

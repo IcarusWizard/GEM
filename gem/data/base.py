@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 import PIL
 from queue import Queue
@@ -6,95 +7,125 @@ from queue import Queue
 import torch, torchvision
 from .utils import check_keys
 
-# class VideoDataset(torch.utils.data.Dataset):
-#     """
-#         Return dataset contain video images
-#         Keys and values:
-#             observations : tensor B x T x C x H x W
-#             actions : tensor B x T x A
-#     """
-#     def __init__(self, 
-#                 path,
-#                 dataset,
-#                 horizon,
-#                 fix_start=False):
-#         super().__init__()
-#         self.horizon = horizon
-#         self.path = path
-#         self.dataset = dataset
-#         self.fix_start = fix_start
-#         self.config = self.load_pkl(os.path.join(path, 'config.pkl'))
+class ActionSequenceDataset(torch.utils.data.Dataset):
+    """
+        Base dataset of video sequence
+
+        Inputs:
+
+            root : str, path to the dataset
+            dataset : str, subset choose from 'train' 'val' 'test'
+            keys: dict, define the kind of data in the dataset
+            max_length : int, maxima length of each sequence
+            horizon : int, length of each loaded sample (not bigger than max_length)
+            fix_start : bool, whether every data start from time step 0, default : False
+    """
+    def __init__(self, root, dataset, keys={"obs" : ("image_main", 'image'), "action" : ('action', 'txt'), 'reward' : None}, max_length=1000, horizon=1000, fix_start=False):
+        super().__init__()
+        self.horizon = horizon
+        self.root = root
+        self.dataset = dataset
+        self.max_length = max_length
+        self.fix_start = fix_start
+
+        self.keys = keys  
+
+        self.datapath = os.path.join(self.root, dataset)
+
+        # load trajlist
+        foldernames = sorted(os.listdir(self.datapath))
+        self.trajlist = [os.path.join(self.datapath, foldername) for foldername in foldernames]
+
+        assert self.horizon <= self.sequence_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
+            self.horizon,
+            self.sequence_length
+        )
         
-#         # use only one view
-#         self.keys = []
-#         self.shapes = []
-#         for key, shape in self.config.items():
-#             if 'image' in key:
-#                 if 'image_main' in key or 'image_view0' in key:
-#                     self.image_key = key[1:].split('/')[0]
-#                     self.image_shape = shape
-#                     self.keys.append(self.image_key)
-#                     self.shapes.append(self.image_shape)
-#             elif 'action' in key:
-#                 self.action_key = key[1:]
-#                 self.action_shape = shape
-#                 self.keys.append(self.action_key)
-#                 self.shapes.append(self.action_shape)
-#         self.config = {'observations' : self.image_shape, 
-#                        'actions' : self.action_shape}
+    def load_pkl(self, filename):
+        with open(filename, 'rb') as f:
+            data = pickle.load(f)
+        return data
 
-#         # load trajlist
-#         foldernames = sorted(os.listdir(os.path.join(path, dataset)))
-#         self.trajlist = [os.path.join(path, dataset, foldername) for foldername in foldernames]
+    def load_txt(self, filename):
+        return np.loadtxt(filename)
 
-#         # find sequence length
-#         actions = np.loadtxt(os.path.join(self.trajlist[0], "{}.txt".format(self.action_key)))
-#         self.sequence_length = actions.shape[0]
+    def load_image(self, filename):
+        return plt.imread(filename)
 
-#         assert self.horizon <= self.sequence_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
-#             self.horizon,
-#             self.sequence_length
-#         )
+    def __len__(self):
+        return len(self.trajlist)
+
+    def __getitem__(self, index):
+        # load data
+        traj_folder = self.trajlist[index]
+        files = os.listdir(traj_folder)
+
+        # set start point
+        start = 0 if self.fix_start else random.randint(0, self.sequence_length - self.horizon)
+
+        output = {}
+
+        # load obs
+        key, filetype = self.key['obs']
+        if filetype == 'image':
+            for key in self.keys['image']:
+                # first find the suffix
+                for filename in files:
+                    if key in filename:
+                        suffix = filename.split('.')[-1]
+
+                prototype = key + '_{}.' + suffix
+
+                images = []
+                for i in range(start, start + self.horizon):
+                    images.append(self.load_image(os.path.join(traj_folder, prototype.format(i))))
+                images = np.stack(images)
+                
+        elif filetype == 'pkl':
+            images = self.load_pkl(os.path.join(traj_folder, key + '.pkl'))
+        else:
+            raise ValueError('obs does not support {} type'.format(filetype))
+
+        if images.dtype == np.uint8:
+            images = images / 255.0 # normalize
         
-#     def load_pkl(self, filename):
-#         with open(filename, 'rb') as f:
-#             data = pickle.load(f)
-#         return data
+        images = torch.as_tensor(images, dtype=torch.float32)
+        if len(images.shape) == 3: # gray image
+            images = images.unsqueeze(dim=1).contiguous()
+        elif len(images.shape) == 4: # RGB image
+            images = images.permute(0, 3, 1, 2).contiguous() # permute the axis to torch form
 
-#     def set_config(self, config):
-#         self.config = config
+        output['obs'] = images
 
-#     def get_config(self):
-#         return self.config
+        # load action
+        if self.keys['action'] is not None:
+            key, filetype = self.keys['action']
+            if filetype == 'txt':
+                data = self.load_txt(os.path.join(traj_folder, key + '.txt'))
+            elif filetype == 'pkl':
+                data = self.load_pkl(os.path.join(traj_folder, key + '.pkl'))
+            else:
+                raise ValueError('reward does not support {} type'.format(filetype))            
+            data = torch.as_tensor(data, dtype=torch.float32)
+            output['action'] = data
+        else:
+            output['action'] = None
+
+        # load action
+        if self.keys['reward'] is not None:
+            key, filetype = self.keys['reward']
+            if filetype == 'txt':
+                data = self.load_txt(os.path.join(traj_folder, key + '.txt'))
+            elif filetype == 'pkl':
+                data = self.load_pkl(os.path.join(traj_folder, key + '.pkl'))
+            else:
+                raise ValueError('reward does not support {} type'.format(filetype))            
+            data = torch.as_tensor(data, dtype=torch.float32)
+            output['reward'] = data
+        else:
+            output['reward'] = None 
         
-#     def __len__(self):
-#         return len(self.trajlist)
-
-#     def __getitem__(self, index):
-#         # load data
-#         traj_folder = self.trajlist[index]
-#         # data = self.load_pkl(self.filelist[index])
-
-#         # set start point
-#         start = 0 if self.fix_start else random.randint(0, self.sequence_length - self.horizon)
-
-#         # load data
-#         output = {}
-
-#         imgs = []
-#         for i in range(start, start + self.horizon):
-#             img = plt.imread(os.path.join(traj_folder, "{}_{}.jpg".format(self.image_key, i)))
-#             imgs.append(img[np.newaxis])
-#         imgs = np.concatenate(imgs, axis=0)
-#         imgs = imgs / 255.0
-#         imgs = np.transpose(imgs, (0, 3, 1, 2))
-#         output['observations'] = torch.tensor(imgs, dtype=torch.float32)
-
-#         actions = np.loadtxt(os.path.join(traj_folder, "{}.txt".format(self.action_key)))  
-#         actions = actions[start : start + self.horizon]
-#         output['actions'] = torch.tensor(actions, dtype=torch.float32)
-        
-#         return output
+        return output
 
 class ImageDataset(torch.utils.data.Dataset):
     """
@@ -135,29 +166,3 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.file_list)
-
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--dataset', type=str, default='test')
-#     parser.add_argument('--horizon', type=int, default=10)
-
-#     args = parser.parse_args()
-
-#     dataset = VideoDataset('data/bair', args.dataset, horizon=args.horizon, fix_start=True)
-#     config = dataset.get_config()
-#     print(config)
-#     loader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=4, shuffle=False)
-#     count = 0
-#     start = time.time()
-
-#     gif_path = os.path.join('gt', '{}_{}'.format(args.dataset, args.horizon))
-#     if not os.path.exists(gif_path):
-#         os.makedirs(gif_path)
-
-#     for data in loader:
-#         end = time.time()
-#         print(end - start)
-#         start = end
-#         imgs = data['observations'][0]
-#         torch_save_gif(os.path.join(gif_path, '{}.gif'.format(count)), imgs, fps=10)
-#         count += 1
