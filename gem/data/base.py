@@ -36,9 +36,9 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
         foldernames = sorted(os.listdir(self.datapath))
         self.trajlist = [os.path.join(self.datapath, foldername) for foldername in foldernames]
 
-        assert self.horizon <= self.sequence_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
+        assert self.horizon <= self.max_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
             self.horizon,
-            self.sequence_length
+            self.max_length
         )
         
     def load_pkl(self, filename):
@@ -68,18 +68,17 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
         # load obs
         key, filetype = self.key['obs']
         if filetype == 'image':
-            for key in self.keys['image']:
-                # first find the suffix
-                for filename in files:
-                    if key in filename:
-                        suffix = filename.split('.')[-1]
+            # first find the suffix
+            for filename in files:
+                if key in filename:
+                    suffix = filename.split('.')[-1]
 
-                prototype = key + '_{}.' + suffix
+            prototype = key + '_{}.' + suffix
 
-                images = []
-                for i in range(start, start + self.horizon):
-                    images.append(self.load_image(os.path.join(traj_folder, prototype.format(i))))
-                images = np.stack(images)
+            images = []
+            for i in range(start, start + self.horizon):
+                images.append(self.load_image(os.path.join(traj_folder, prototype.format(i))))
+            images = np.stack(images)
                 
         elif filetype == 'pkl':
             images = self.load_pkl(os.path.join(traj_folder, key + '.pkl'))

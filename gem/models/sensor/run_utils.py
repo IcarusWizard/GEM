@@ -72,7 +72,7 @@ def config_model_train(config, model_param):
 
 def get_model_by_checkpoint(checkpoint):
     state_dict = checkpoint['model_state_dict']
-    model_param = checkpoint['model_param']
+    model_param = checkpoint['model_parameters']
     name = checkpoint['config']['model']
 
     if name == 'VAE':
