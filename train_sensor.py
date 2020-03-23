@@ -19,7 +19,6 @@ if __name__ == '__main__':
                         help='choose from bmnist, mnist, svhn, cifar, celeba32, celeba64, celeba128')
     parser.add_argument('--model', type=str, default='VAE',
                         help='choose from VAE, FVAE, VQ-VAE')
-    parser.add_argument('--custom', action='store_true', help='enable custom config')
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
     model_parser.add_argument('--latent_dim', type=int, default=2)
