@@ -27,7 +27,6 @@ if __name__ == '__main__':
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
     model_parser.add_argument('--hidden_dim', type=int, default=512)
-    model_parser.add_argument('--network_type', type=str, default='conv')
     model_parser.add_argument('--decoder_hidden_layers', type=int, default=5)
     model_parser.add_argument('--decoder_features', type=int, default=512)
     model_parser.add_argument('--action_mimic', type=bool, default=True)
@@ -63,7 +62,6 @@ if __name__ == '__main__':
     print('using seed {}'.format(seed))
     
     checkpoint = torch.load(os.path.join(SENSORDIR, args.checkpoint + '.pt'), map_location='cpu')
-    config = checkpoint['config']
 
     coder = get_model_by_checkpoint(checkpoint)
     coder.requires_grad_(False)
@@ -76,8 +74,9 @@ if __name__ == '__main__':
     model_param = {
         'obs_dim' : dataset_config['obs'],
         "action_dim" : dataset_config['action'],
+        "hidden_dim" : config['hidden_dim'],
         "action_mimic" : config['action_mimic'],
-        "predcit_reward" : config['predict_reward'],
+        "predict_reward" : config['predict_reward'],
         "decoder_config" : {
             "hidden_layers" : config['decoder_hidden_layers'],
             "features" : config['decoder_features'],
