@@ -6,7 +6,7 @@ from .trainer import PredictorTrainer
 
 class GRUBaseline(torch.nn.Module):
     def __init__(self, obs_dim, action_dim, hidden_dim, action_mimic=True, predict_reward=True, 
-                 decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : torch.nn.ELU}):
+                 decoder_config={"hidden_layers" : 2, "hidden_features" : 512, "activation" : torch.nn.ELU}):
         super().__init__()
 
         self.obs_dim = obs_dim

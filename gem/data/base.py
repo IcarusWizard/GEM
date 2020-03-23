@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import random
 import pickle
 import PIL
 from queue import Queue
@@ -62,7 +63,7 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
         files = os.listdir(traj_folder)
 
         # set start point
-        start = 0 if self.fix_start else random.randint(0, self.sequence_length - self.horizon)
+        start = 0 if self.fix_start else random.randint(0, self.max_length - self.horizon)
 
         output = {}
 
