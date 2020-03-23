@@ -112,7 +112,7 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
         else:
             output['action'] = None
 
-        # load action
+        # load reward
         if self.keys['reward'] is not None:
             key, filetype = self.keys['reward']
             if filetype == 'txt':
@@ -123,8 +123,6 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
                 raise ValueError('reward does not support {} type'.format(filetype))            
             data = torch.as_tensor(data, dtype=torch.float32)
             output['reward'] = data
-        else:
-            output['reward'] = None 
         
         return output
 

@@ -69,8 +69,9 @@ if __name__ == '__main__':
             if action is not None:
                 pickle_data(action.numpy(), os.path.join(traj_folder, 'action.pkl'))
 
-            reward = data['reward']
-            if reward is not None:
+            
+            if 'reward' in data.keys():
+                reward = data['reward']
                 pickle_data(reward.numpy(), os.path.join(traj_folder, 'reward.pkl'))
 
             
