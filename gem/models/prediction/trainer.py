@@ -52,21 +52,21 @@ class PredictorTrainer(Trainer):
 
             # log true video
             decode_video = self.coder.decode(obs.view(-1, obs.shape[-1]))
-            decode_video = decode_video.view(*obs.shape[:2], decode_video.shape[1:])
+            decode_video = decode_video.view(*obs.shape[:2], *decode_video.shape[1:])
             self.writer.add_video('input_video', decode_video.premute(1, 0, 2, 3, 4), global_step=step)
 
             # log predicted video
             _, prediction, _ = self.model(obs, action, reward)
             predicted_obs = prediction['obs']
             predicted_video = self.coder.decode(predicted_obs.view(-1, obs.shape[-1]))
-            predicted_video = predicted_video.view(*obs.shape[:2], decode_video.shape[1:])
+            predicted_video = predicted_video.view(*obs.shape[:2], *decode_video.shape[1:])
             self.writer.add_video('predicted_video', predicted_video.premute(1, 0, 2, 3, 4), global_step=step)
 
             # log generated video
             generation = self.model.generate(obs[0], obs.shape[0], action)
             generated_obs = generation['obs']
             generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
-            generated_video = generated_video.view(*obs.shape[:2], decode_video.shape[1:])
+            generated_video = generated_video.view(*obs.shape[:2], *decode_video.shape[1:])
             self.writer.add_video('generated_video_true_action', predicted_video.premute(1, 0, 2, 3, 4), global_step=step)
 
             # log generated video (action also generated)
@@ -74,7 +74,7 @@ class PredictorTrainer(Trainer):
                 generation = self.model.generate(obs[0], obs.shape[0], action)
                 generated_obs = generation['obs']
                 generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
-                generated_video = generated_video.view(*obs.shape[:2], decode_video.shape[1:])
+                generated_video = generated_video.view(*obs.shape[:2], *decode_video.shape[1:])
                 self.writer.add_video('generated_video_fake_action', predicted_video.premute(1, 0, 2, 3, 4), global_step=step)
 
             self.coder = self.coder.cpu()

@@ -51,19 +51,19 @@ class GRUBaseline(torch.nn.Module):
             
             pre_obs.append(self.obs_pre(h))
             obs_dis = Normal(pre_obs[-1], 1)
-            pre_obs_loss += torch.sum(obs_dis.log_prob(_obs))
+            pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
 
             if self.action_minic:
                 pre_action.append(self.action_pre(h.detach()))
                 action_dis = Normal(pre_action[-1], 1)
-                pre_action_loss += torch.sum(action_dis.log_prob(_action))
+                pre_action_loss -= torch.sum(action_dis.log_prob(_action))
 
             if self.predict_reward:
                 assert reward is not None
                 _reward = reward[i]
                 pre_reward.append(self.reward_pre(h))
                 reward_dis = Normal(pre_reward[-1], 1)
-                pre_reward_loss += torch.sum(reward_dis.log_prob(_action))
+                pre_reward_loss -= torch.sum(reward_dis.log_prob(_action))
 
             h = self.rnn_cell(torch.cat([_obs, _action], dim=1), h) # compute next state
 
