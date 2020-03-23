@@ -75,16 +75,20 @@ class GRUBaseline(torch.nn.Module):
 
         prediction = {
             "obs" : torch.stack(pre_obs),
-            "action" : torch.stack(pre_action) if self.action_minic else None,
-            "reward" : torch.stack(pre_reward) if self.predict_reward else None,
         }
 
         info = {
             "loss" : loss.item(),
             "obs_loss" : pre_obs_loss.item(),
-            "action_loss" : pre_action_loss.item() if self.action_minic else None,
-            "reward_loss" : pre_reward_loss.item() if self.predict_reward else None,
         }      
+
+        if self.action_minic:
+            prediction['action'] = torch.stack(pre_action)
+            info['action_loss'] = pre_action_loss.item()
+        
+        if self.predict_reward:
+            prediction['reward'] = torch.stack(pre_reward)
+            info['reward_loss'] = pre_reward_loss.item()
 
         return loss, prediction, info
 
@@ -114,9 +118,13 @@ class GRUBaseline(torch.nn.Module):
 
         prediction = {
             "obs" : torch.stack(pre_obs),
-            "action" : torch.stack(pre_action) if self.action_minic else None,
-            "reward" : torch.stack(pre_reward) if self.predict_reward else None,
-        }     
+        }
+
+        if self.action_minic:
+            prediction['action'] = torch.stack(pre_action)
+        
+        if self.predict_reward:
+            prediction['reward'] = torch.stack(pre_reward)
 
         return prediction
 

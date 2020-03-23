@@ -80,9 +80,9 @@ class PredictorTrainer(Trainer):
             self.coder = self.coder.cpu()
     
     def parse_batch(self, batch):
-        obs = batch['obs'].premute(1, 0, 2).to(self.device)
-        action = batch['action'].premute(1, 0, 2).to(self.device)
-        reward = batch['reward'].premute(1, 0, 2).to(self.device) if self.config['predict_reward'] else None    
+        obs = batch['obs'].permute(1, 0, 2).to(self.device)
+        action = batch['action'].permute(1, 0, 2).to(self.device)
+        reward = batch['reward'].permute(1, 0, 2).to(self.device) if self.config['predict_reward'] else None    
         return obs, action, reward    
 
     def test_whole(self, loader):
@@ -95,7 +95,7 @@ class PredictorTrainer(Trainer):
 
                 obs, action, reward = self.parse_batch(batch)
 
-                _loss, _info = self.model(obs, action, reward)
+                _loss, _,  _info = self.model(obs, action, reward)
 
                 loss += _loss
                 for k in _info.keys():
