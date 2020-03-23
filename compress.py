@@ -27,7 +27,7 @@ if __name__ == '__main__':
     select_gpus(args.gpu)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     
-    checkpoint = torch.load(os.path.join(MODELDIR, args.checkpoint + '.pt'))
+    checkpoint = torch.load(os.path.join(MODELDIR, args.checkpoint + '.pt'), map_location='cpu')
     config = checkpoint['config']
 
     model = get_model_by_checkpoint(checkpoint)

@@ -62,7 +62,7 @@ if __name__ == '__main__':
     config['seed'] = seed
     print('using seed {}'.format(seed))
     
-    checkpoint = torch.load(os.path.join(SENSORDIR, args.checkpoint + '.pt'))
+    checkpoint = torch.load(os.path.join(SENSORDIR, args.checkpoint + '.pt'), map_location='cpu')
     config = checkpoint['config']
 
     coder = get_model_by_checkpoint(checkpoint)
