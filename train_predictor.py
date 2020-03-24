@@ -12,7 +12,7 @@ from gem.models.sensor.run_utils import get_model_by_checkpoint
 from degmo.utils import setup_seed, nats2bits, config_dataset
 
 from gem.data import make_dataset
-from gem.models.prediction import GRUBaseline
+from gem.models.predictor import GRUBaseline
 
 LOGDIR = os.path.join('logs', 'predictor')
 SENSORDIR = os.path.join('checkpoint', 'sensor')

@@ -13,6 +13,8 @@ from degmo.utils import select_gpus
 
 from gem.data import make_dataset
 
+from gem.utils import save_npz
+
 LOGDIR = os.path.join('logs', 'sensor')
 MODELDIR = os.path.join('checkpoint', 'sensor')
 DATADIR = './dataset'
@@ -49,40 +51,24 @@ if __name__ == '__main__':
     for name, dataset in sets.items():
         dataset_folder = os.path.join(OUTPUT_ROOT, name)
         create_dir(dataset_folder)
-
         
         print('In {} set'.format(name))
 
         for i in tqdm(range(len(dataset))):
-            traj_folder = os.path.join(dataset_folder, 'traj_{}'.format(i))
-            create_dir(traj_folder)
+            traj_file = 'traj_{}.npz'.format(i)
 
             data = dataset[i]
+            output = {}
 
-            obs = data['obs']
+            obs = data['image']
+            output['image'] = (obs.numpy() * 255).as_type(np.uint8)
             obs = obs.to(device)
             z = model.encode(obs)
+            output['emb'] = z.cpu().numpy()
 
-            pickle_data(z.cpu().numpy(), os.path.join(traj_folder, 'obs.pkl'))
+            # copy every others
+            for k in data.keys():
+                if not (k == 'image' or k == 'emb'):
+                    output[k] = data[k].numpy()
 
-            action = data['action']
-            if action is not None:
-                pickle_data(action.numpy(), os.path.join(traj_folder, 'action.pkl'))
-
-            
-            if 'reward' in data.keys():
-                reward = data['reward']
-                pickle_data(reward.numpy(), os.path.join(traj_folder, 'reward.pkl'))
-
-            
-
-
-
-
-
-
-
-
-
-        
-
+            save_npz(traj_file, output)

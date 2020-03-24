@@ -8,10 +8,11 @@ from queue import Queue
 
 import torch, torchvision
 from .utils import check_keys
+from ..utils import save_npz, load_npz
 
-class ActionSequenceDataset(torch.utils.data.Dataset):
+class ActionSequenceSeparatedDataset(torch.utils.data.Dataset):
     """
-        Base dataset of video sequence
+        Base dataset of video sequence (Separated Version)
 
         Inputs:
 
@@ -64,6 +65,7 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
 
         # set start point
         start = 0 if self.fix_start else random.randint(0, self.max_length - self.horizon)
+        end = start + self.horizon
 
         output = {}
 
@@ -124,7 +126,68 @@ class ActionSequenceDataset(torch.utils.data.Dataset):
             data = torch.as_tensor(data, dtype=torch.float32)
             output['reward'] = data
         
-        return output
+        return {k : v[start:end] for k, v in output.items()}
+
+class ActionSequenceIntegratedDataset(torch.utils.data.Dataset):
+    """
+        Base dataset of video sequence (Integrated Version)
+
+        Inputs:
+
+            root : str, path to the dataset
+            dataset : str, subset choose from 'train' 'val' 'test'
+            max_length : int, maxima length of each sequence
+            horizon : int, length of each loaded sample (not bigger than max_length)
+            fix_start : bool, whether every data start from time step 0, default : False
+    """
+    def __init__(self, root, dataset, max_length=1000, horizon=1000, fix_start=False):
+        super().__init__()
+        self.horizon = horizon
+        self.root = root
+        self.dataset = dataset
+        self.max_length = max_length
+        self.fix_start = fix_start
+
+        self.keys = keys  
+
+        self.datapath = os.path.join(self.root, dataset)
+
+        # load trajlist
+        filenames = sorted(os.listdir(self.datapath))
+        self.trajlist = [os.path.join(self.datapath, filename) for filename in filenames]
+
+        assert self.horizon <= self.max_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
+            self.horizon,
+            self.max_length
+        )
+
+    def __len__(self):
+        return len(self.trajlist)
+
+    def __getitem__(self, index):
+        # load data
+        traj_file = self.trajlist[index]
+        output = load_npz(traj_file)
+
+        # set start point
+        start = 0 if self.fix_start else random.randint(0, self.max_length - self.horizon)
+        end = start + self.horizon
+
+        if 'image' in output.keys():
+            images = output['image']
+            
+            if images.dtype == np.uint8:
+                images = images / 255.0 # normalize
+            
+            images = torch.as_tensor(images, dtype=torch.float32)
+            if len(images.shape) == 3: # gray image
+                images = images.unsqueeze(dim=1).contiguous()
+            elif len(images.shape) == 4: # RGB image
+                images = images.permute(0, 3, 1, 2).contiguous() # permute the axis to torch form
+
+            output['image'] = images
+
+        return {k : torch.as_tensor(v[start:end], dtype=torch.float32) for k, v in output.items()}
 
 class ImageDataset(torch.utils.data.Dataset):
     """

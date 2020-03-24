@@ -7,32 +7,25 @@ from google.protobuf.json_format import MessageToDict
 import pickle, os, re, time
 from functools import partial
 
-from ..utils import load_pkl
+from ..utils import load_npz
 from .utils import get_unpack_functions
-from .base import ActionSequenceDataset
+from .base import ActionSequenceIntegratedDataset
 
 def load_compressed_dataset(root, horizon, fix_start=False):
-    data_folder = os.path.join(root, 'train', os.listdir(os.path.join(root, 'train'))[0]) # choose a folder
+    data_file = os.path.join(root, 'train', os.listdir(os.path.join(root, 'train'))[0]) # choose a file
 
-    config = {}
-    obs = load_pkl(os.path.join(data_folder, 'obs.pkl'))
-    max_length = obs.shape[0]
+    data = load_npz(data_file)
+    max_length = data['action'].shape[0]
 
-    config['obs'] = obs.shape[1]
-
-    action = load_pkl(os.path.join(data_folder, 'action.pkl'))
-    config['action'] = action.shape[1]
-
-    config['reward'] = 1 if 'reward.pkl' in os.listdir(data_folder) else None
-
-    keys = {
-        "obs" : ('obs', 'pkl'),
-        "action" : ('action', 'pkl'),
-        "reward" : ('reward', 'pkl') if config['reward'] else None,
+    config = {
+        'obs' : data['image'].shape[1:],
+        'emb' : None if 'emb' not in data.keys() else data['emb'].shape[1],
+        'action' : data['action'].shape[1],
+        'reward' : None if 'reward' not in data.keys() else 1,
     }
 
-    trainset = ActionSequenceDataset(root, 'train', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
-    valset = ActionSequenceDataset(root, 'val', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
-    testset = ActionSequenceDataset(root, 'test', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
+    trainset = ActionSequenceIntegratedDataset(root, 'train', max_length=max_length, horizon=horizon, fix_start=fix_start)
+    valset = ActionSequenceIntegratedDataset(root, 'val', max_length=max_length, horizon=horizon, fix_start=fix_start)
+    testset = ActionSequenceIntegratedDataset(root, 'test', max_length=max_length, horizon=horizon, fix_start=fix_start)
 
     return (trainset, valset, testset, config)
