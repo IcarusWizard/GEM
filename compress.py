@@ -59,7 +59,7 @@ if __name__ == '__main__':
         
         print('In {} set'.format(name))
 
-        for index in range(len(dataset)):
+        for index in tqdm(range(len(dataset))):
             traj_file = os.path.join(dataset_folder, 'traj_{}.npz'.format(index))
 
             data = dataset[index]
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             p = pool.apply_async(save_npz, (traj_file, output))
             process.append(p)
 
-        for p in tqdm(process):
+        for p in process:
             p.get()
 
     pool.close()
