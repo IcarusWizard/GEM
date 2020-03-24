@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
     model_parser.add_argument('--hidden_dim', type=int, default=512)
-    model_parser.add_argument('--decoder_hidden_layers', type=int, default=5)
+    model_parser.add_argument('--decoder_hidden_layers', type=int, default=2)
     model_parser.add_argument('--decoder_features', type=int, default=512)
     model_parser.add_argument('--action_mimic', type=bool, default=True)
     model_parser.add_argument('--predict_reward', type=bool, default=False)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     filenames, dataset_config, train_loader, val_loader, test_loader = config_dataset(config, root=OUTPUT_ROOT, horizon=args.horizon, fix_start=args.fix_start)
 
     model_param = {
-        'obs_dim' : dataset_config['obs'],
+        'obs_dim' : dataset_config['emb'],
         "action_dim" : dataset_config['action'],
         "hidden_dim" : config['hidden_dim'],
         "action_mimic" : config['action_mimic'],
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     config['model_param'] = model_param
     config['log_name'] = os.path.join(LOGDIR, '{}'.format(filenames['log_name']))
 
-    model_class = getattr(gem.models.prediction, config['model'])
+    model_class = getattr(gem.models.predictor, config['model'])
     model = model_class(**model_param)
     trainer_class = model.get_trainer()
 

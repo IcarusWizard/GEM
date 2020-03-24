@@ -17,6 +17,10 @@ from gem.data import make_dataset
 
 from gem.utils import save_npz
 
+def free_save_npz(filename, d):
+    save_npz(filename, d)
+    del filename, d
+
 LOGDIR = os.path.join('logs', 'sensor')
 MODELDIR = os.path.join('checkpoint', 'sensor')
 DATADIR = './dataset'
@@ -66,7 +70,7 @@ if __name__ == '__main__':
             output = {}
 
             obs = data['obs']
-            output['image'] = (obs.numpy() * 255).astype(np.uint8)
+            output['image'] = (obs.permute(0, 2, 3, 1).numpy() * 255).astype(np.uint8)
             obs = obs.to(device)
             z = model.encode(obs)
             output['emb'] = z.cpu().numpy()
@@ -76,9 +80,7 @@ if __name__ == '__main__':
                 if not (k == 'obs' or k == 'emb'):
                     output[k] = data[k].numpy()
 
-            save_npz(traj_file, output)
-
-            p = pool.apply_async(save_npz, (traj_file, output))
+            p = pool.apply_async(free_save_npz, (traj_file, output))
             process.append(p)
 
         for p in process:
