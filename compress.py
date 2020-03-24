@@ -21,25 +21,6 @@ LOGDIR = os.path.join('logs', 'sensor')
 MODELDIR = os.path.join('checkpoint', 'sensor')
 DATADIR = './dataset'
 
-def save_file(index, dataset_folder, dataset, model):
-    traj_file = os.path.join(dataset_folder, 'traj_{}.npz'.format(index))
-
-    data = dataset[index]
-    output = {}
-
-    obs = data['obs']
-    output['image'] = (obs.numpy() * 255).astype(np.uint8)
-    obs = obs.to(device)
-    z = model.encode(obs)
-    output['emb'] = z.cpu().numpy()
-
-    # copy every others
-    for k in data.keys():
-        if not (k == 'obs' or k == 'emb'):
-            output[k] = data[k].numpy()
-
-    save_npz(traj_file, output)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str)
@@ -78,8 +59,26 @@ if __name__ == '__main__':
         
         print('In {} set'.format(name))
 
-        for i in range(len(dataset)):
-            p = pool.apply_async(save_file, (i, dataset_folder, dataset, model))
+        for index in range(len(dataset)):
+            traj_file = os.path.join(dataset_folder, 'traj_{}.npz'.format(index))
+
+            data = dataset[index]
+            output = {}
+
+            obs = data['obs']
+            output['image'] = (obs.numpy() * 255).astype(np.uint8)
+            obs = obs.to(device)
+            z = model.encode(obs)
+            output['emb'] = z.cpu().numpy()
+
+            # copy every others
+            for k in data.keys():
+                if not (k == 'obs' or k == 'emb'):
+                    output[k] = data[k].numpy()
+
+            save_npz(traj_file, output)
+
+            p = pool.apply_async(save_npz, (traj_file, output))
             process.append(p)
 
         for p in tqdm(process):
