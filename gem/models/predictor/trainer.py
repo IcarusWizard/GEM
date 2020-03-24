@@ -49,10 +49,10 @@ class PredictorTrainer(Trainer):
             batch = next(self.train_iter)
             obs, action, reward = self.parse_batch(batch)
 
-            images = batch['images'].to(self.device)[:, :8].contiguous()
+            images = batch['image'].to(self.device)[:, :8].contiguous()
             obs = obs[:, :8].contiguous()
             action = action[:, :8].contiguous()
-            if self.predict_reward:
+            if self.config['predict_reward']:
                 reward = reward[:, :8].contiguous()
 
             # log compressed video

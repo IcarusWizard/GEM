@@ -148,8 +148,6 @@ class ActionSequenceIntegratedDataset(torch.utils.data.Dataset):
         self.max_length = max_length
         self.fix_start = fix_start
 
-        self.keys = keys  
-
         self.datapath = os.path.join(self.root, dataset)
 
         # load trajlist

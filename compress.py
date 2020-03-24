@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import torch, torchvision
 from tqdm import tqdm
 
-from multiprocessing import Pool
-
 from gem.utils import create_dir
 
 import os, argparse
@@ -16,10 +14,6 @@ from degmo.utils import select_gpus
 from gem.data import make_dataset
 
 from gem.utils import save_npz
-
-def free_save_npz(filename, d):
-    save_npz(filename, d)
-    del filename, d
 
 LOGDIR = os.path.join('logs', 'sensor')
 MODELDIR = os.path.join('checkpoint', 'sensor')
@@ -54,7 +48,6 @@ if __name__ == '__main__':
         'test' : testset,
     }
 
-    pool = Pool(os.cpu_count())
     for name, dataset in sets.items():
         dataset_folder = os.path.join(OUTPUT_ROOT, name)
         create_dir(dataset_folder)
@@ -80,11 +73,4 @@ if __name__ == '__main__':
                 if not (k == 'obs' or k == 'emb'):
                     output[k] = data[k].numpy()
 
-            p = pool.apply_async(free_save_npz, (traj_file, output))
-            process.append(p)
-
-        for p in process:
-            p.get()
-
-    pool.close()
-    pool.join()
+            save_npz(traj_file, output)
