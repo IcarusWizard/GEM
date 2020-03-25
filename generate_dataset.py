@@ -18,8 +18,6 @@ if __name__ == '__main__':
     parser.add_argument('--train_traj_num', type=int, default=200)
     parser.add_argument('--test_traj_num', type=int, default=5)
 
-    parser.add_argument()
-
     args = parser.parse_args()
 
     config = args.__dict__ 
@@ -28,13 +26,13 @@ if __name__ == '__main__':
     
     config['datadir'] = os.path.join(datadir, 'train')
     create_dir(config['datadir'])
-    random_generate(make_env, config['train_traj_num'])
+    random_generate(make_env(config), config['train_traj_num'])
 
     config['datadir'] = os.path.join(datadir, 'val')
     create_dir(config['datadir'])
-    random_generate(make_env, config['test_traj_num'])
+    random_generate(make_env(config), config['test_traj_num'])
 
     config['datadir'] = os.path.join(datadir, 'test')
     create_dir(config['datadir'])
-    random_generate(make_env, config['test_traj_num'])
+    random_generate(make_env(config), config['test_traj_num'])
     

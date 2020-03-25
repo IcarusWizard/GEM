@@ -4,6 +4,7 @@ import sys, os
 import threading
 import traceback
 
+import gym
 import numpy as np
 from PIL import Image
 

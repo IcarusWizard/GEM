@@ -1,4 +1,4 @@
-import os
+import os, time
 
 from .wrapper import *
 
@@ -26,7 +26,7 @@ def make_env(config):
     callbacks = []
     if 'datadir' in config.keys():
         datadir = config['datadir']
-        callbacks.append(lambda ep: save_episodes(datadir, [ep]))
+        callbacks.append(lambda ep: save_episodes(datadir, ep))
         env = Collect(env, callbacks)
         env = RewardObs(env)
     return env
@@ -38,15 +38,16 @@ def save_episodes(datadir, ep):
 def random_generate(env, traj_num):
     action_space = env.action_space
 
-    for _ in range(traj_num):
+    for i in range(traj_num):
         env.reset()
 
         num = 0
+        start_time = time.time()
         
         while True:
             obs, action, done, info = env.step(action_space.sample())
             num += 1
 
             if done:
-                print(f'generate a sequence with length {num}')
+                print(f'use {time.time() - start_time} s to generate sequence {i} with length {num}')
                 break
