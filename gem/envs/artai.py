@@ -12,7 +12,7 @@ class Atari:
   LOCK = threading.Lock()
 
   def __init__(
-      self, name, action_repeat=4, size=(84, 84), grayscale=True, noops=30,
+      self, name, action_repeat=4, size=(84, 84), grayscale=False, noops=30,
       life_done=False, sticky_actions=True):
     import gym
     version = 0 if sticky_actions else 4
