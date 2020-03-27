@@ -1,6 +1,4 @@
-from . import *
-
-import torch
+import importlib
 
 def config_model_train(config, model_param):
     model_param['network_type'] = config['network_type']
@@ -40,13 +38,6 @@ def config_model_train(config, model_param):
             "output_type" : config['output_type'],
         })       
 
-        if config['model']== 'VAE':
-            model = VAE(**model_param)
-        elif config['model'] == 'CVAE':
-            model = CVAE(**model_param)
-        elif config['model'] == 'AVAE':
-            model = AVAE(**model_param)
-
     elif config['model']== 'FVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
@@ -54,7 +45,6 @@ def config_model_train(config, model_param):
             "flow_hidden_layers" : config['flow_hidden_layers'],
             "flow_num_transformation" : config['flow_num_transformation'],
         })        
-        model = FVAE(**model_param)
     elif config['model']== 'VQ-VAE':
         if not config['network_type']== 'fullconv':
             model_param['config']['latent_dim'] = config['latent_dim']
@@ -64,9 +54,12 @@ def config_model_train(config, model_param):
             "beta" : config['beta'],
             "output_type" : config['output_type'],
         })     
-        model = VQ_VAE(**model_param)
     else:
         raise ValueError('Model {} is not supported!'.format(config['model']))
+
+    module = importlib.import_module('gem.models.sensor')
+    model_class = getattr(module, config['model'])
+    model = model_class(**model_param)
 
     return model, model_param
 
@@ -75,16 +68,9 @@ def get_model_by_checkpoint(checkpoint):
     model_param = checkpoint['model_parameters']
     name = checkpoint['config']['model']
 
-    if name == 'VAE':
-        model = VAE(**model_param)
-    elif name == 'FVAE':
-        model = FVAE(**model_param)
-    elif name == 'VQ-VAE':
-        model = VQ_VAE(**model_param)
-    elif name == 'CVAE':
-        model = CVAE(**model_param)
-    elif name == 'AVAE':
-        model == AVAE(**model_param)
+    module = importlib.import_module('gem.models.sensor')
+    model_class = getattr(module, name)
+    model = model_class(**model_param)
 
     model.load_state_dict(state_dict)
     model.eval()

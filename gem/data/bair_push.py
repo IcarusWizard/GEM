@@ -7,12 +7,14 @@ from google.protobuf.json_format import MessageToDict
 import pickle, os, re, time
 from functools import partial
 
+from ..utils import save_npz
 from .utils import get_unpack_functions
-from .base import ImageDataset, ActionSequenceSeparatedDataset
+from .base import SequenceDataset
+from .wrapper import ActionShift, SeparateImage, KeyMap, Split, multiple_wrappers
 
-def load_bair_push(keys=['image_main'], normalize=False):
+def load_bair_push(key='image_main'):
     """
-        keys : list[str], options : image_main, image_aux1
+        key : choose from image_main, image_aux1
     """
     ROOT = 'dataset/bair_push/'
     TF_PATH = os.path.join(ROOT, 'tfrecords')
@@ -31,21 +33,28 @@ def load_bair_push(keys=['image_main'], normalize=False):
         "w" : 64,
     }
 
-    transform = [torchvision.transforms.ToTensor()]
-    if normalize:
-        transform.append(torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
-    transform = torchvision.transforms.Compose(transform)
+    wrapper = multiple_wrappers([
+        partial(KeyMap, key_pairs=[(key, 'image')]),
+        partial(SeparateImage, max_length=30),
+    ])
 
-    trainset = ImageDataset(os.path.join(BUILD_PATH, 'train'), keys, transform)
-    valset = ImageDataset(os.path.join(BUILD_PATH, 'val'), keys, transform)
-    testset = ImageDataset(os.path.join(BUILD_PATH, 'test'), keys, transform)
+    trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
+    valset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'val')))
+    testset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'test')))
 
     return (trainset, valset, testset, config)
 
-def load_bair_push_seq(keys={"obs" : ("image_main", 'image'), "action" : ('action', 'txt'), 'reward' : None}, horizon=30, fix_start=True):
+def load_bair_push_seq(key="image_main", horizon=30, fix_start=True):
     ROOT = 'dataset/bair_push/'
     TF_PATH = os.path.join(ROOT, 'tfrecords')
     BUILD_PATH = os.path.join(ROOT, 'build')
+
+    if not os.path.exists(BUILD_PATH):
+        if not os.path.exists(TF_PATH):
+            raise FileExistsError('Please run dataset/bair_push/download.sh first!')
+        else:
+            converter = BairConverter(TF_PATH, BUILD_PATH)
+            converter.convert()
 
     max_length = 30
 
@@ -55,9 +64,15 @@ def load_bair_push_seq(keys={"obs" : ("image_main", 'image'), "action" : ('actio
         'reward' : None,
     }
 
-    trainset = ActionSequenceSeparatedDataset(BUILD_PATH, 'train', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
-    valset = ActionSequenceSeparatedDataset(BUILD_PATH, 'val', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
-    testset = ActionSequenceSeparatedDataset(BUILD_PATH, 'test', keys, max_length=max_length, horizon=horizon, fix_start=fix_start)
+    wrapper = multiple_wrappers([
+        ActionShift,
+        partial(KeyMap, key_pairs=[(key, 'image')]),
+        partial(Split, horizon=horizon, fix_start=fix_start),
+    ])
+
+    trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
+    valset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'val')))
+    testset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'test')))
 
     return (trainset, valset, testset, config)
 
@@ -198,14 +213,6 @@ def convert_single(input_traj, output_folder, parser):
     record = tf.python_io.tf_record_iterator(input_traj)
     for traj in record:
         dict_data = parser(traj)
-        target_folder = os.path.join(output_folder, 'traj_{}'.format(index))
-        if not os.path.exists(target_folder):
-            os.makedirs(target_folder)
-        for key, value in dict_data.items():
-            if 'image' in key:
-                for i in range(value.shape[0]):
-                    plt.imsave(os.path.join(target_folder, '{}_{}.jpg'.format(key[1:].split('/')[0], i)), value[i])
-            else:
-                np.savetxt(os.path.join(target_folder, '{}.txt'.format(key[1:])), value)
-        index += 1
+        traj_file = os.path.join(output_folder, 'traj_{}.npz'.format(index))
+        save_npz(traj_file, dict_data)
         print('traj {} is finished!'.format(index)) 
