@@ -24,6 +24,7 @@ def load_bair_push(key='image_main'):
         if not os.path.exists(TF_PATH):
             raise FileExistsError('Please run dataset/bair_push/download.sh first!')
         else:
+            print('Converting from tf_record ...')
             converter = BairConverter(TF_PATH, BUILD_PATH)
             converter.convert()
 
@@ -160,8 +161,6 @@ class BairConverter(object):
         print('-' * 50)
         print(config)
         print('-' * 50)
-        with open(os.path.join(self.output_path, 'config.pkl'), 'wb') as f:
-            pickle.dump(config, f)
 
         self.parser = partial(_parse, keys=self.keys, functions=self.functions, sequence_size=self.sequence_size, image_shape=self.image_shape)
     
@@ -204,7 +203,7 @@ def _parse(traj, keys, functions, sequence_size, image_shape):
             else:
                 data = np.array(raw)
             list_data.append(data[np.newaxis])
-        dict_data[key] = np.concatenate(list_data, axis=0)
+        dict_data[key.split('/')[1]] = np.concatenate(list_data, axis=0)
     return dict_data
 
 def convert_single(input_traj, output_folder, parser):
@@ -216,3 +215,4 @@ def convert_single(input_traj, output_folder, parser):
         traj_file = os.path.join(output_folder, 'traj_{}.npz'.format(index))
         save_npz(traj_file, dict_data)
         print('traj {} is finished!'.format(index)) 
+        index += 1
