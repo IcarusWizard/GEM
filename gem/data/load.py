@@ -1,4 +1,5 @@
 import os
+import random
 from functools import partial
 import torch
 import torchvision
@@ -22,7 +23,8 @@ def load_sensor_dataset(config, batch_size=None):
     if batch_size is None:
         batch_size = config['batch_size'] // config['image_per_file']
 
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
+    isampler = InfiniteSampler(trainset)
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, sampler=isampler, num_workers=workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, num_workers=workers, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, num_workers=workers, pin_memory=True)
 
@@ -75,7 +77,8 @@ def load_predictor_dataset(config, batch_size=None):
     if batch_size is None:
         batch_size = config['batch_size']
 
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
+    isampler = InfiniteSampler(trainset)
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, sampler=isampler, num_workers=workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, num_workers=workers, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, num_workers=workers, pin_memory=True)
 
@@ -115,3 +118,19 @@ def load_env_dataset_seq(name, horizon, fix_start):
 
     return (trainset, valset, testset, config)
     
+
+class InfiniteSampler(torch.utils.data.Sampler):
+    def __init__(self, data_source):
+        super().__init__(data_source)
+        self.data_source = data_source
+
+    def __len__(self):
+        return len(self.data_source)
+
+    def __iter__(self):
+        indexes = []
+        while True:
+            if len(indexes) == 0:
+                indexes = list(range(len(self.data_source)))
+                random.shuffle(indexes)
+            yield indexes.pop()
