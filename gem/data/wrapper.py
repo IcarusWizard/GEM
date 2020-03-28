@@ -1,6 +1,7 @@
 import torch, torchvision
 
 import random
+import re
 
 class ActionShift(torch.utils.data.Dataset):
     """
@@ -64,24 +65,51 @@ class SeparateImage(torch.utils.data.Dataset):
     """
         split the sequence dataset to separate image dataset
     """
-    def __init__(self, dataset, max_length):
+    def __init__(self, dataset, image_per_file=1):
         super().__init__()
         self._dataset = dataset
-        self.max_length = max_length
+        self.image_per_file = image_per_file
+
+        expr = re.compile(r'(\d+)')
+
+        traj_lengths = [int(expr.findall(f)[-1]) // self.image_per_file for f in self._dataset.trajlist]
+        self.length = sum(traj_lengths)
+
+        self.sample_order = []
+        for l in traj_lengths:
+            order = list(range(l*self.image_per_file))
+            random.shuffle(order)
+            self.sample_order.append(order)
+
+        self.cumulate_lengths = [0]
+        length = 0
+        for l in traj_lengths:
+            length += l
+            self.cumulate_lengths.append(length)
 
     def __getattr__(self, name):
         return getattr(self._dataset, name)
 
     def __len__(self):
-        return len(self._dataset) * self.max_length
+        return self.length
 
     def __getitem__(self, index):
-        traj_index = index // self.max_length
-        index_in_traj = index % self.max_length
+        max_index = len(self.cumulate_lengths) - 1
+        min_index = 0
+        traj_index = (max_index + min_index) // 2
+        while not (self.cumulate_lengths[traj_index] <= index and index < self.cumulate_lengths[traj_index + 1]):
+            if self.cumulate_lengths[traj_index] > index: # search left
+                max_index = traj_index
+            else: # search right
+                min_index = traj_index
+            traj_index = (max_index + min_index) // 2
+
+        index_in_traj = index - self.cumulate_lengths[traj_index]
         
         data = self._dataset[traj_index]
+        selected_index = self.sample_order[traj_index][index_in_traj*self.image_per_file:(index_in_traj+1)*self.image_per_file]
 
-        return (data['image'][index_in_traj], )  # keep the iterable form
+        return (data['image'][selected_index], )
 
 class KeyMap(torch.utils.data.Dataset):
     """ 

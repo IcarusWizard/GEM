@@ -12,14 +12,14 @@ DATAROOT = './dataset'
 def load_sensor_dataset(config, batch_size=None):
     name = config['dataset']
     if name == 'bair_push':
-        trainset, valset, testset, model_param = load_bair_push()
+        trainset, valset, testset, model_param = load_bair_push(**config)
     else:
         trainset, valset, testset, model_param =  load_env_dataset(name, **config)
 
     workers = min(config['workers'], os.cpu_count()) # compute actual workers in use
     
     if batch_size is None:
-        batch_size = config['batch_size']
+        batch_size = config['batch_size'] // config['image_per_file']
 
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, num_workers=workers, pin_memory=True)
@@ -48,9 +48,7 @@ def load_env_dataset(name, **kargs):
         "w" : 64,
     }
 
-    wrapper = multiple_wrappers([
-        partial(SeparateImage, max_length=kargs.get('max_length', 500)),
-    ])
+    wrapper = partial(SeparateImage, image_per_file=kargs['image_per_file'])
 
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))

@@ -4,7 +4,7 @@ import numpy as np
 
 from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
 from degmo.vae.utils import get_kl, LOG2PI
-from degmo.vae.trainer import VAETrainer
+from .trainer import VAETrainer
 
 from .utils import get_kl_2normal
 

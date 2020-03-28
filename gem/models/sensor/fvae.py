@@ -5,7 +5,7 @@ import numpy as np
 from degmo.flow.distribution import FlowDistribution1D
 from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
 from degmo.vae.utils import get_kl, LOG2PI
-from degmo.vae.trainer import VAETrainer
+from .trainer import VAETrainer
 
 class FVAE(torch.nn.Module):
     def __init__(self, c=3, h=32, w=32, latent_dim=2, network_type='conv', config={},  

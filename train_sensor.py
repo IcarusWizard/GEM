@@ -17,7 +17,6 @@ MODELDIR = os.path.join('checkpoint', 'sensor')
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='bair_push')
-    parser.add_argument('--max_length', type=int, default=30)
     parser.add_argument('--model', type=str, default='VAE', help='choose from VAE, FVAE')
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
@@ -43,6 +42,7 @@ if __name__ == '__main__':
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
     train_parser.add_argument('--batch_size', type=int, default=32)
+    train_parser.add_argument('--image_per_file', type=int, default=2)
     train_parser.add_argument('--gpu', type=str, default='0')
     train_parser.add_argument('--workers', type=int, default=9999,
                               help='how many workers use for dataloader, default is ALL')

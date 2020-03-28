@@ -33,7 +33,8 @@ def make_env(config):
 
 def save_episodes(datadir, ep):
     traj_id = len(os.listdir(datadir))
-    save_npz(os.path.join(datadir, f'traj_{traj_id}.npz'), ep)
+    length = list(ep.values())[0].shape[0]
+    save_npz(os.path.join(datadir, f'traj_{traj_id}_{length}.npz'), ep)
 
 def random_generate(env, traj_num):
     action_space = env.action_space

@@ -36,7 +36,7 @@ def load_bair_push(key='image_main'):
 
     wrapper = multiple_wrappers([
         partial(KeyMap, key_pairs=[(key, 'image')]),
-        partial(SeparateImage, max_length=30),
+        partial(SeparateImage, image_per_file=config['image_per_file']),
     ])
 
     trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
@@ -212,7 +212,7 @@ def convert_single(input_traj, output_folder, parser):
     record = tf.python_io.tf_record_iterator(input_traj)
     for traj in record:
         dict_data = parser(traj)
-        traj_file = os.path.join(output_folder, 'traj_{}.npz'.format(index))
+        traj_file = os.path.join(output_folder, f'traj_{index}_30.npz')
         save_npz(traj_file, dict_data)
         print('traj {} is finished!'.format(index)) 
         index += 1
