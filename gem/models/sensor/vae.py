@@ -16,15 +16,17 @@ class VAE(torch.nn.Module):
             h : int, height of the input image
             w : int, width of the input image
             latent_dim : int, dimension of the latent variable
+            free_nats : the amount of information is free to the model
             network_type : str, type of the encoder and decoder, choose from conv and mlp, default: conv
             config : dict, parameters for constructe encoder and decoder
             output_type : str, type of the distribution p(x|z), choose from fix_std(std=1), gauss and bernoulli, default: gauss
             use_mce : bool, whether to compute KL by Mento Carlo Estimation, default: False
     """
-    def __init__(self, c=3, h=32, w=32, latent_dim=2, network_type='conv', config={}, 
+    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={}, 
                  output_type='gauss', use_mce=False):
         super().__init__()
         self.latent_dim = latent_dim
+        self.free_nats = free_nats
         self.output_type = output_type
         self.use_mce = use_mce
         self.input_dim = c * h * w
@@ -77,6 +79,9 @@ class VAE(torch.nn.Module):
             reconstruction_loss = - x * torch.log(p + 1e-8) - (1 - x) * torch.log(1 - p + 1e-8)
 
         kl = torch.mean(kl)
+        if kl < self.free_nats:
+            kl = kl.detach()
+            
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
 
         return kl + reconstruction_loss, {

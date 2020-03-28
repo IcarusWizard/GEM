@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
     model_parser.add_argument('--latent_dim', type=int, default=256)
+    model_parser.add_argument('--free_nats', type=float, default=20)
     model_parser.add_argument('--output_type', type=str, default='gauss',
                               help='the output mode for vae decoder, choose from fix_std, gauss, bernoulli')
     model_parser.add_argument('--use_mce', action='store_true', help='use Mento Carlo Estimation to compute kl divergence')

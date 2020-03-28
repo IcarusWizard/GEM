@@ -8,10 +8,27 @@ from degmo.vae.utils import get_kl, LOG2PI
 from .trainer import VAETrainer
 
 class FVAE(torch.nn.Module):
-    def __init__(self, c=3, h=32, w=32, latent_dim=2, network_type='conv', config={},  
+    r"""
+        VAE with Flow as prior
+        
+        Inputs:
+
+            c : int, channel of the input image
+            h : int, height of the input image
+            w : int, width of the input image
+            latent_dim : int, dimension of the latent variable
+            free_nats : the amount of information is free to the model
+            network_type : str, type of the encoder and decoder, choose from conv and mlp, default: conv
+            config : dict, parameters for constructe encoder and decoder
+            flow_hidden_layers : int, num of hidden layers in each transforamtion
+            flow_features : int, num of features in each transformation
+            flow_num_transformation : int, num of transformation in prior
+    """
+    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={},  
                  flow_hidden_layers=3, flow_features=64, flow_num_transformation=3):
         super().__init__()
         self.latent_dim = latent_dim
+        self.free_nats = free_nats
         self.input_dim = c * h * w
         output_c = 2 * c
 
@@ -51,8 +68,10 @@ class FVAE(torch.nn.Module):
         _logs = torch.tanh(_logs)
         reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
 
-
         kl = torch.mean(kl)
+        if kl < self.free_nats:
+            kl = kl.detach()
+
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
         extra_info = torch.mean(prior_prob - init_prior_prob) # D_KL(p_{\theta} || p_{\theta_{init}})
 
