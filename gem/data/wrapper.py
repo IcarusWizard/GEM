@@ -1,4 +1,5 @@
 import torch, torchvision
+import numpy as np
 
 import random
 import re
@@ -22,8 +23,8 @@ class ActionShift(torch.utils.data.Dataset):
 
         assert "action" in data.keys()
         action = data['action']
-        zero_action = torch.zeros(1, action.shape[1], dtype=action.dtype, device=action.device)
-        data['action'] = torch.cat([zero_action, action[:-1]])
+        zero_action = np.zeros((1, action.shape[1]), dtype=action.dtype)
+        data['action'] = np.concatenate([zero_action, action[:-1]], axis=0)
 
         return data
 
@@ -139,6 +140,32 @@ class KeyMap(torch.utils.data.Dataset):
             data[new_key] = data.pop(old_key)
 
         return data
+
+class ToTensor(torch.utils.data.Dataset):
+    """
+        map the data from ndarray to tensor
+    """
+    def __init__(self, dataset):
+        super().__init__()
+        self._dataset = dataset
+
+    def __getattr__(self, name):
+        return getattr(self._dataset, name)
+
+    def __len__(self):
+        return len(self._dataset)
+
+    def __getitem__(self, index):        
+        data = self._dataset[index]
+
+        if isinstance(data, tuple):
+            new_data = (torch.as_tensor(data, dtype=torch.float32) for d in data)
+        elif isinstance(data, list):
+            new_data = [torch.as_tensor(data, dtype=torch.float32) for d in data]
+        elif isinstance(data, dict):
+            new_data = {k : torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
+
+        return data    
 
 def multiple_wrappers(wrapper_list):
     def wrapper(dataset):

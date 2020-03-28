@@ -10,7 +10,7 @@ from functools import partial
 from ..utils import save_npz
 from .utils import get_unpack_functions
 from .base import SequenceDataset
-from .wrapper import ActionShift, SeparateImage, KeyMap, Split, multiple_wrappers
+from .wrapper import ActionShift, SeparateImage, KeyMap, Split, ToTensor, multiple_wrappers
 
 def load_bair_push(key='image_main', image_per_file=2):
     """
@@ -37,6 +37,7 @@ def load_bair_push(key='image_main', image_per_file=2):
     wrapper = multiple_wrappers([
         partial(KeyMap, key_pairs=[(key, 'image')]),
         partial(SeparateImage, image_per_file=image_per_file),
+        ToTensor,
     ])
 
     trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
@@ -67,6 +68,7 @@ def load_bair_push_seq(key="image_main", horizon=30, fix_start=True):
         ActionShift,
         partial(KeyMap, key_pairs=[(key, 'image')]),
         partial(Split, horizon=horizon, fix_start=fix_start),
+        ToTensor()
     ])
 
     trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))

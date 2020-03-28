@@ -5,7 +5,7 @@ import torchvision
 
 from .bair_push import load_bair_push, load_bair_push_seq
 from .base import SequenceDataset
-from .wrapper import ActionShift, SeparateImage, KeyMap, Split, multiple_wrappers
+from .wrapper import ActionShift, SeparateImage, KeyMap, Split, ToTensor, multiple_wrappers
 
 DATAROOT = './dataset'
 
@@ -49,7 +49,10 @@ def load_env_dataset(name, image_per_file):
         "w" : 64,
     }
 
-    wrapper = partial(SeparateImage, image_per_file=image_per_file)
+    wrapper = multiple_wrappers([
+        partial(SeparateImage, image_per_file=image_per_file),
+        ToTensor,
+    ]) 
 
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))
@@ -93,7 +96,10 @@ def load_env_dataset_seq(name, horizon, fix_start):
     if not os.path.exists(datadir):
         raise ValueError('Please run generate dataset first')
 
-    wrapper = partial(Split, horizon=horizon, fix_start=fix_start)
+    wrapper = multiple_wrappers([
+        partial(Split, horizon=horizon, fix_start=fix_start),
+        ToTensor,
+    ]) 
 
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))
