@@ -1,1 +1,1 @@
-from .load import load_sensor_dataset
+from .load import load_sensor_dataset, load_predictor_dataset

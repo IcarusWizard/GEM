@@ -89,7 +89,7 @@ class PredictorTrainer(Trainer):
             B, T = images.shape[:2]
             images = images.view(B * T, *images.shape[2:])
             obs = self.coder.encode(images)
-            obs = obs.view(B, T, obs.shape[2]).permute(1, 0, 2)
+            obs = obs.view(B, T, obs.shape[1]).permute(1, 0, 2)
         else:
             obs = batch['emb'].permute(1, 0, 2).to(self.device)
         action = batch['action'].permute(1, 0, 2).to(self.device)

@@ -11,7 +11,7 @@ import degmo, gem
 from gem.models.sensor.run_utils import get_model_by_checkpoint
 from degmo.utils import setup_seed, nats2bits, config_dataset
 
-from gem.data import make_dataset
+from gem.data import load_predictor_dataset
 from gem.models.predictor import GRUBaseline
 
 LOGDIR = os.path.join('logs', 'predictor')
@@ -22,7 +22,6 @@ DATADIR = './dataset'
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='GRUBaseline')
-    parser.add_argument('--dataset', type=str, default='compressed')
     parser.add_argument('--checkpoint', type=str)
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
@@ -66,13 +65,13 @@ if __name__ == '__main__':
     coder = get_model_by_checkpoint(checkpoint)
     coder.requires_grad_(False)
 
-    OUTPUT_ROOT = os.path.join(DATADIR, args.checkpoint + '_compress')
+    config['dataset'] = checkpoint['config']['dataset']
 
     # config dataset
-    filenames, dataset_config, train_loader, val_loader, test_loader = config_dataset(config, root=OUTPUT_ROOT, horizon=args.horizon, fix_start=args.fix_start)
+    filenames, dataset_config, train_loader, val_loader, test_loader = load_predictor_dataset(config)
 
     model_param = {
-        'obs_dim' : dataset_config['emb'],
+        'obs_dim' : coder.latent_dim,
         "action_dim" : dataset_config['action'],
         "hidden_dim" : config['hidden_dim'],
         "action_mimic" : config['action_mimic'],

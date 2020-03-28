@@ -6,6 +6,6 @@ build/
 
 logs/
 dataset/
-checkpoints/
+checkpoint/
 
 nohup.out
