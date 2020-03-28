@@ -12,7 +12,7 @@ from .utils import get_unpack_functions
 from .base import SequenceDataset
 from .wrapper import ActionShift, SeparateImage, KeyMap, Split, multiple_wrappers
 
-def load_bair_push(key='image_main'):
+def load_bair_push(key='image_main', **kargs):
     """
         key : choose from image_main, image_aux1
     """
@@ -36,7 +36,7 @@ def load_bair_push(key='image_main'):
 
     wrapper = multiple_wrappers([
         partial(KeyMap, key_pairs=[(key, 'image')]),
-        partial(SeparateImage, image_per_file=config['image_per_file']),
+        partial(SeparateImage, image_per_file=kargs['image_per_file']),
     ])
 
     trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
