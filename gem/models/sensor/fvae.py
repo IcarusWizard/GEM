@@ -60,6 +60,9 @@ class FVAE(torch.nn.Module):
         init_prior_prob = torch.sum(self.init_prior.log_prob(z), dim=1)
 
         kl = post_prob - prior_prob
+        kl = torch.mean(kl)
+        if kl.item() < self.free_nats:
+            kl = torch.mean(post_prob.detach() - prior_prob)
 
         _x = self.decoder(z)
 
@@ -67,10 +70,6 @@ class FVAE(torch.nn.Module):
         _mu, _logs = torch.chunk(_x, 2, dim=1)
         _logs = torch.tanh(_logs)
         reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
-
-        kl = torch.mean(kl)
-        if kl < self.free_nats:
-            kl = kl.detach()
 
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
         extra_info = torch.mean(prior_prob - init_prior_prob) # D_KL(p_{\theta} || p_{\theta_{init}})
