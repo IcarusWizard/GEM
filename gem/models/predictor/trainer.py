@@ -90,10 +90,6 @@ class PredictorTrainer(Trainer):
                 generated_video = generated_video.view(*obs.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
                 self.writer.add_video('prior_video_fake_action', generated_video, global_step=step, fps=self.config['fps'])
 
-
-
-
-    
     def parse_batch(self, batch):
         if 'emb' not in batch.keys():
             images = batch['image'].to(self.device)
@@ -104,7 +100,7 @@ class PredictorTrainer(Trainer):
         else:
             obs = batch['emb'].permute(1, 0, 2).to(self.device)
         action = batch['action'].permute(1, 0, 2).to(self.device)
-        reward = batch['reward'].permute(1, 0, 2).to(self.device) if self.config['predict_reward'] else None    
+        reward = batch['reward'].permute(1, 0).unsqueeze(dim=-1).to(self.device) if self.config['predict_reward'] else None  
         return obs, action, reward    
 
     def test_whole(self, loader):
