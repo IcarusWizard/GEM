@@ -29,13 +29,12 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def process_data(self, value):
         if value.dtype == np.uint8:
-            value = value / 255.0 # normalize
+            value = (value / 255.0).astype(np.float32) # normalize
         
-        value = torch.as_tensor(value, dtype=torch.float32)
         if len(value.shape) == 3: # gray image
-            value = value.unsqueeze(dim=1).contiguous()
+            value = value[:, np.newaxis]
         elif len(value.shape) == 4: # RGB image
-            value = value.permute(0, 3, 1, 2).contiguous() # permute the axis to torch form
+            value = value.transpose((0, 3, 1, 2)) # permute the axis to torch form
 
         return value
 

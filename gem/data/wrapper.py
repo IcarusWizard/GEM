@@ -66,7 +66,7 @@ class Split(torch.utils.data.Dataset):
         start = 0 if self.fix_start else random.randint(0, max_length - self.horizon)
         end = start + self.horizon
 
-        return {k : v[start:end] for k, v in data.items()}
+        return {k : v[start:end].copy() for k, v in data.items()} # copy will clean the pointer to data, thus the memory can be freed by interpreter
 
 class SeparateImage(torch.utils.data.Dataset):
     """
