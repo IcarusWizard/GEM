@@ -76,11 +76,22 @@ class PredictorTrainer(Trainer):
 
             # log generated video (action also generated)
             if self.config['action_mimic']:
-                generation = self.model.generate(obs[0], obs.shape[0], action)
+                generation = self.model.generate(obs[0], obs.shape[0])
                 generated_obs = generation['obs']
                 generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
                 generated_video = generated_video.view(*obs.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
                 self.writer.add_video('generated_video_fake_action', torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0), global_step=step)
+
+                # generate with coder prior
+                obs0 = self.coder.prior.sample((8, self.coder.latent_dim)) if isinstance(self.coder.prior, torch.distributions.Normal) else self.coder.prior.sample(8) 
+                generation = self.model.generate(obs0, obs.shape[0])
+                generated_obs = generation['obs']
+                generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
+                generated_video = generated_video.view(*obs.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
+                self.writer.add_video('prior_video_fake_action', generated_video, global_step=step)
+
+
+
 
     
     def parse_batch(self, batch):

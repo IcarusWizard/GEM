@@ -38,25 +38,31 @@ class Split(torch.utils.data.Dataset):
         self.horizon = horizon
         self.fix_start = fix_start
 
-        data = self._dataset[0]
-        self.max_length = list(data.values())[0].shape[0]
+        expr = re.compile(r'(\d+)')
 
-        assert self.horizon <= self.max_length, "horizon must smaller than sequence length, i.e. {} <= {}".format(
-            self.horizon,
-            self.max_length
-        )
+        self.new_traj_indexes = []
+        max_length = 0
+        for i, traj_file in enumerate(self._dataset.trajlist):
+            traj_length = int(expr.findall(traj_file)[-1])
+            if traj_length >= horizon:
+                self.new_traj_indexes.append(i)
+            max_length = max(max_length, traj_length)
+
+        assert len(self.new_traj_indexes) > 0, f"no file match your requirement of horizon {horizon}, the max length is only {max_length}!"
 
     def __getattr__(self, name):
         return getattr(self._dataset, name)
 
     def __len__(self):
-        return len(self._dataset)
+        return len(self.new_traj_indexes)
 
     def __getitem__(self, index):
-        data = self._dataset[index]
+        data = self._dataset[self.new_traj_indexes[index]]
+
+        max_length = list(data.values())[0].shape[0]
 
         # set start point
-        start = 0 if self.fix_start else random.randint(0, self.max_length - self.horizon)
+        start = 0 if self.fix_start else random.randint(0, max_length - self.horizon)
         end = start + self.horizon
 
         return {k : v[start:end] for k, v in data.items()}

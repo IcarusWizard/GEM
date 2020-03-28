@@ -57,8 +57,6 @@ def load_bair_push_seq(key="image_main", horizon=30, fix_start=True):
             converter = BairConverter(TF_PATH, BUILD_PATH)
             converter.convert()
 
-    max_length = 30
-
     config = {
         "obs" : (3, 64, 64),
         "action" : 4,
