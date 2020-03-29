@@ -115,7 +115,7 @@ class SeparateImage(torch.utils.data.Dataset):
         
         data = self._dataset[traj_index]
         selected_index = self.sample_order[traj_index][index_in_traj*self.image_per_file:(index_in_traj+1)*self.image_per_file]
-
+        
         return (data['image'][selected_index], )
 
 class KeyMap(torch.utils.data.Dataset):
@@ -159,9 +159,9 @@ class ToTensor(torch.utils.data.Dataset):
         data = self._dataset[index]
 
         if isinstance(data, tuple):
-            new_data = (torch.as_tensor(data, dtype=torch.float32) for d in data)
+            new_data = tuple([torch.as_tensor(d, dtype=torch.float32) for d in data])
         elif isinstance(data, list):
-            new_data = [torch.as_tensor(data, dtype=torch.float32) for d in data]
+            new_data = [torch.as_tensor(d, dtype=torch.float32) for d in data]
         elif isinstance(data, dict):
             new_data = {k : torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
