@@ -165,7 +165,7 @@ class ToTensor(torch.utils.data.Dataset):
         elif isinstance(data, dict):
             new_data = {k : torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
-        return data    
+        return new_data    
 
 def multiple_wrappers(wrapper_list):
     def wrapper(dataset):
