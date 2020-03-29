@@ -20,3 +20,13 @@ def save_npz(filename, d):
 def load_npz(filename):
     data = np.load(filename)
     return {k : v for k, v in data.items()}
+
+def save_gif(filename, video, fps=10):
+    """
+        save the input video to gif
+        filename: String
+        video: ndarray with shape [T, H, W, C]
+    """
+    import moviepy.editor as mpy
+    clip = mpy.ImageSequenceClip([video[i]for i in range(video.shape[0])], fps=fps)
+    clip.write_gif(filename, verbose=False, logger=None)
