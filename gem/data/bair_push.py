@@ -68,7 +68,7 @@ def load_bair_push_seq(key="image_main", horizon=30, fix_start=True):
         ActionShift,
         partial(KeyMap, key_pairs=[(key, 'image')]),
         partial(Split, horizon=horizon, fix_start=fix_start),
-        ToTensor()
+        ToTensor,
     ])
 
     trainset = wrapper(SequenceDataset(os.path.join(BUILD_PATH, 'train')))
