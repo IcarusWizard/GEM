@@ -29,7 +29,6 @@ if __name__ == '__main__':
     model_parser.add_argument('--decoder_hidden_layers', type=int, default=2)
     model_parser.add_argument('--decoder_features', type=int, default=512)
     model_parser.add_argument('--action_mimic', type=bool, default=True)
-    # model_parser.add_argument('--predict_reward', type=bool, default=False)
 
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
