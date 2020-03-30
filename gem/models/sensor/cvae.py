@@ -82,8 +82,10 @@ class CVAE(torch.nn.Module):
         _mu, _logs = torch.chunk(self.encoder(_x), 2, dim=1)
         _logs = torch.clamp_max(_logs, 10)
         consistent_loss = torch.mean(torch.sum(get_kl_2normal(_mu, _logs, mu, logs), dim=1))
+        loss = kl + reconstruction_loss + consistent_loss
         
-        return kl + reconstruction_loss + consistent_loss, {
+        return loss, {
+            "NELBO" : loss.item(),
             "KL divergence" : kl.item(),
             "reconstruction loss" : reconstruction_loss.item(),
             'consistent loss' : consistent_loss.item()

@@ -83,8 +83,10 @@ class VAE(torch.nn.Module):
             kl = kl.detach()
             
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+        loss = kl + reconstruction_loss
 
-        return kl + reconstruction_loss, {
+        return loss, {
+            "NELBO" : loss.item(),
             "KL divergence" : kl.item(),
             "reconstruction loss" : reconstruction_loss.item(),
         }

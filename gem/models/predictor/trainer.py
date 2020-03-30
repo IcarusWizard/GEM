@@ -41,7 +41,7 @@ class PredictorTrainer(Trainer):
             print('{0} is {1:{2}} bits'.format(k, nats2bits(val_info[k]), '.5f'))
 
         for k in self.last_train_info.keys():
-            self.writer.add_scalars(k, {'train' : nats2bits(self.last_train_info[k]), 
+            self.writer.add_scalars('predictor/' + k, {'train' : nats2bits(self.last_train_info[k]), 
                                     'val' : nats2bits(val_info[k])}, global_step=step)
         
         with torch.no_grad():
@@ -89,6 +89,8 @@ class PredictorTrainer(Trainer):
                 generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
                 generated_video = generated_video.view(*obs.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
                 self.writer.add_video('prior_video_fake_action', generated_video, global_step=step, fps=self.config['fps'])
+
+        self.writer.flush()
 
     def parse_batch(self, batch):
         if 'emb' not in batch.keys():

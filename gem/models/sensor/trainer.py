@@ -36,18 +36,14 @@ class VAETrainer(Trainer):
         print('In Step {}'.format(step))
         print('-' * 15)
         print('In training set:')
-        print('NELBO is {0:{1}} bits'.format(nats2bits(self.last_train_loss), '.5f'))
         for k in self.last_train_info.keys():
             print('{0} is {1:{2}} bits'.format(k, nats2bits(self.last_train_info[k]), '.5f'))
         print('In validation set:')
-        print('NELBO is {0:{1}} bits'.format(nats2bits(val_loss), '.5f'))
         for k in val_info.keys():
             print('{0} is {1:{2}} bits'.format(k, nats2bits(val_info[k]), '.5f'))
 
-        self.writer.add_scalars('NELBO', {'train' : nats2bits(self.last_train_loss), 
-                                        'val' : nats2bits(val_loss)}, global_step=step)
         for k in self.last_train_info.keys():
-            self.writer.add_scalars(k, {'train' : nats2bits(self.last_train_info[k]), 
+            self.writer.add_scalars('sensor/' + k, {'train' : nats2bits(self.last_train_info[k]), 
                                     'val' : nats2bits(val_info[k])}, global_step=step)
         
         with torch.no_grad():
@@ -59,6 +55,8 @@ class VAETrainer(Trainer):
             inputs_and_reconstructions = torch.stack([input_imgs, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
             self.writer.add_images('inputs_and_reconstructions', inputs_and_reconstructions, global_step=step)
 
+        self.writer.flush()
+        
     def test_whole(self, loader):
         with torch.no_grad():
             num = 0
