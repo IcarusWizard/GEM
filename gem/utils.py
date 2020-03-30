@@ -1,6 +1,29 @@
 import pickle
 import os
+import random
 import numpy as np
+import torch
+
+LOG2PI = 0.5 * np.log(2 * np.pi)
+
+def setup_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+def select_gpus(gpus="0"):
+    '''
+        gpus -> string, examples: "0", "0,1,2"
+    ''' 
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpus
+
+def nats2bits(nats):
+    return nats / np.log(2)
+
+def bits2nats(bits):
+    return bits * np.log(2)
 
 def pickle_data(data, filename):
     with open(filename, 'wb') as f:

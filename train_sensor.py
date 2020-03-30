@@ -4,12 +4,9 @@ import torch, torchvision
 
 import os, argparse
 
-import degmo
 from gem.models.sensor.run_utils import config_model_train
 from gem.data import load_sensor_dataset
-from degmo.utils import setup_seed, nats2bits, config_dataset
-
-from gem import data
+from gem.utils import setup_seed
 
 LOGDIR = os.path.join('logs', 'sensor')
 MODELDIR = os.path.join('checkpoint', 'sensor')
@@ -30,7 +27,7 @@ if __name__ == '__main__':
     model_parser.add_argument('--features', type=int, default=256)
     model_parser.add_argument('--conv_features', type=int, default=256)
     model_parser.add_argument('--down_sampling', type=int, default=3)
-    model_parser.add_argument('--res_layers', nargs='+', type=int, default=[1])
+    model_parser.add_argument('--res_layers', nargs='+', type=int, default=[0])
     model_parser.add_argument('--use_batchnorm', action='store_true')
     model_parser.add_argument('--k', type=int, default=512)
     model_parser.add_argument('--d', type=int, default=64)

@@ -2,17 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch, torchvision
 from tqdm import tqdm
+import importlib
 
-from gem.utils import pickle_data, create_dir
+from gem.utils import create_dir
 
 import os, argparse
 
-import degmo, gem
 from gem.models.sensor.run_utils import get_model_by_checkpoint
-from degmo.utils import setup_seed, nats2bits, config_dataset
+from gem.utils import setup_seed
 
 from gem.data import load_predictor_dataset
-from gem.models.predictor import GRUBaseline
 
 LOGDIR = os.path.join('logs', 'predictor')
 SENSORDIR = os.path.join('checkpoint', 'sensor')
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     model_parser.add_argument('--decoder_hidden_layers', type=int, default=2)
     model_parser.add_argument('--decoder_features', type=int, default=512)
     model_parser.add_argument('--action_mimic', type=bool, default=True)
-    model_parser.add_argument('--predict_reward', type=bool, default=False)
+    # model_parser.add_argument('--predict_reward', type=bool, default=False)
 
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
@@ -71,6 +70,8 @@ if __name__ == '__main__':
 
     # config dataset
     filenames, dataset_config, train_loader, val_loader, test_loader = load_predictor_dataset(config)
+    sample_data = train_loader.dataset[0]
+    config['predict_reward'] = 'reward' in sample_data.keys()
 
     model_param = {
         'obs_dim' : coder.latent_dim,
@@ -91,7 +92,8 @@ if __name__ == '__main__':
     config['model_param'] = model_param
     config['log_name'] = os.path.join(LOGDIR, '{}'.format(filenames['log_name']))
 
-    model_class = getattr(gem.models.predictor, config['model'])
+    module = importlib.import_module('gem.models.predictor')
+    model_class = getattr(module, config['model'])
     model = model_class(**model_param)
     trainer_class = model.get_trainer()
 
