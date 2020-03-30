@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
     model_parser.add_argument('--hidden_dim', type=int, default=512)
+    model_parser.add_argument('--stoch_dim', type=int, default=32)
     model_parser.add_argument('--decoder_hidden_layers', type=int, default=2)
     model_parser.add_argument('--decoder_features', type=int, default=512)
     model_parser.add_argument('--action_mimic', type=bool, default=True)
@@ -83,6 +84,9 @@ if __name__ == '__main__':
             "activation" : torch.nn.ELU
         }
     }
+
+    if config['model'] == 'RSSM':
+        model_param['stoch_dim'] = config['stoch_dim']
 
     config['model_param'] = model_param
     config['log_name'] = os.path.join(LOGDIR, '{}'.format(filenames['log_name']))
