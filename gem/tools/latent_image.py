@@ -27,24 +27,27 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str)
     parser.add_argument('--image', type=str)
+    parser.add_argument('--iter', type=int, default=5000)
     args = parser.parse_args()
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     input_file = os.path.join(IMAGE_DIR, args.image)
     image = plt.imread(input_file)
 
     checkpoint = torch.load(os.path.join(MODEL_DIR, args.checkpoint + '.pt'), map_location='cpu')
-    model = get_model_by_checkpoint(checkpoint)
+    model = get_model_by_checkpoint(checkpoint).to(device)
     model.requires_grad_(False)
 
-    image = torch.as_tensor((image / 255.0), dtype=torch.float32).permute(2, 0, 1).unsqueeze(dim=0)
+    image = torch.as_tensor((image / 255.0), dtype=torch.float32).permute(2, 0, 1).unsqueeze(dim=0).to(device)
 
     z = model.encode(image)
-    _image = model.decode(z)[0].permute(1, 2, 0).numpy()
+    _image = model.decode(z)[0].cpu().permute(1, 2, 0).numpy()
 
     _z = torch.zeros_like(z).requires_grad_()
     optim = torch.optim.Adam([_z], lr=1e-3)
 
-    for i in tqdm(range(500)):
+    for i in tqdm(range(5000)):
         __image = model.decode(_z)
 
         loss = torch.sum((image - __image) ** 2)
@@ -53,8 +56,8 @@ if __name__ == '__main__':
         loss.backward()
         optim.step()
     
-    image = image[0].permute(1, 2, 0).numpy()
-    __image = __image = model.decode(_z)[0].detach().permute(1, 2, 0).numpy()
+    image = image[0].cpu().permute(1, 2, 0).numpy()
+    __image = __image = model.decode(_z)[0].detach().cpu().permute(1, 2, 0).numpy()
 
     fig = plt.figure()
     plt.imshow(image)
