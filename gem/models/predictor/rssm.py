@@ -23,7 +23,7 @@ class RSSM(torch.nn.Module):
         self.post = MLP(hidden_dim + obs_dim, 2 * stoch_dim, **decoder_config)
         self.prior = MLP(hidden_dim, 2 * stoch_dim, **decoder_config)
 
-        self.obs_pre = MLP(hidden_dim + stoch_dim, obs_dim, **decoder_config)
+        self.obs_pre = MLP(hidden_dim + stoch_dim, 2 * obs_dim, **decoder_config)
         
         if self.action_minic:
             self.action_pre = MLP(hidden_dim + stoch_dim, action_dim, **decoder_config)
@@ -76,9 +76,12 @@ class RSSM(torch.nn.Module):
 
             whole_state = torch.cat([h, s], dim=1)
             
-            pre_obs.append(self.obs_pre(whole_state))
-            obs_dis = Normal(pre_obs[-1], 1)
+            obs_mu, obs_logs = torch.chunk(self.obs_pre(whole_state), 2, dim=1)
+            obs_logs = torch.tanh(obs_logs)
+            obs_dis = Normal(obs_mu, torch.exp(obs_logs))
             pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
+
+            pre_obs.append(obs_mu)
 
             if self.action_minic and i < T - 1:
                 pre_action.append(self.action_pre(whole_state.detach()))
@@ -139,7 +142,8 @@ class RSSM(torch.nn.Module):
 
             whole_state = torch.cat([h, s], dim=1)
 
-            pre_obs.append(self.obs_pre(whole_state))
+            obs_mu, obs_logs = torch.chunk(self.obs_pre(whole_state), 2, dim=1)
+            pre_obs.append(obs_mu)
 
             if self.action_minic:
                 pre_action.append(_action)

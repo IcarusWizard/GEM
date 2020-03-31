@@ -18,7 +18,7 @@ class GRUBaseline(torch.nn.Module):
 
         self.rnn_cell = torch.nn.GRUCell(obs_dim + action_dim, hidden_dim)
 
-        self.obs_pre = MLP(hidden_dim, obs_dim, **decoder_config)
+        self.obs_pre = MLP(hidden_dim, 2 * obs_dim, **decoder_config)
         
         if self.action_minic:
             self.action_pre = MLP(hidden_dim, action_dim, **decoder_config)
@@ -48,10 +48,13 @@ class GRUBaseline(torch.nn.Module):
         for i in range(T):
             _obs = obs[i]
             _action = action[i]
-            
-            pre_obs.append(self.obs_pre(h))
-            obs_dis = Normal(pre_obs[-1], 1)
+
+            obs_mu, obs_logs = torch.chunk(self.obs_pre(h), 2, dim=1)
+            obs_logs = torch.tanh(obs_logs)
+            obs_dis = Normal(obs_mu, torch.exp(obs_logs))
             pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
+
+            pre_obs.append(obs_mu)
 
             if self.action_minic:
                 pre_action.append(self.action_pre(h.detach()))
@@ -103,7 +106,7 @@ class GRUBaseline(torch.nn.Module):
         h = self.rnn_cell(torch.cat([obs0, torch.zeros(obs0.shape[0], self.action_dim, dtype=obs0.dtype, device=obs0.device)], dim=1)) 
 
         for i in range(horizon):
-            _obs = self.obs_pre(h)
+            _obs, _ = torch.chunk(self.obs_pre(h), 2, dim=1)
             _action = self.action_pre(h.detach()) if action is None else action[i]
             
             pre_obs.append(_obs)
