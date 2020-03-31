@@ -65,7 +65,7 @@ def load_bair_push_seq(key="image_main", horizon=30, fix_start=True):
     }
 
     wrapper = multiple_wrappers([
-        ActionShift,
+        # ActionShift,
         partial(KeyMap, key_pairs=[(key, 'image')]),
         partial(Split, horizon=horizon, fix_start=fix_start),
         ToTensor,
