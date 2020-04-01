@@ -98,8 +98,9 @@ class PFVAE(torch.nn.Module):
         return x
 
     def sample(self, number=1000, deterministic=True):
+        device = next(self.parameters()).device
 
-        z = self.prior.sample((number, self.latent_dim))
+        z = torch.randn(number, self.latent_dim, device=device)
 
         return self.decode(z, deterministic=deterministic)
 
