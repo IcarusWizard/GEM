@@ -7,7 +7,7 @@ from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
 from degmo.vae.utils import get_kl, LOG2PI
 from .trainer import VAETrainer
 
-class FVAE(torch.nn.Module):
+class PFVAE(torch.nn.Module):
     r"""
         VAE with Flow as prior
         
@@ -41,9 +41,9 @@ class FVAE(torch.nn.Module):
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
         
-        self.prior = FlowDistribution1D(latent_dim, flow_num_transformation, flow_features, flow_hidden_layers)
+        self.flow = FlowDistribution1D(latent_dim, flow_num_transformation, flow_features, flow_hidden_layers)
 
-        self.init_prior = torch.distributions.Normal(0, 1)
+        self.prior = torch.distributions.Normal(0, 1)
 
     def forward(self, x):
         mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
@@ -52,12 +52,12 @@ class FVAE(torch.nn.Module):
         # reparameterize trick
         epsilon = torch.randn_like(logs)
         z = mu + epsilon * torch.exp(logs)
+        z, logdet = self.flow(z)
 
         # Use Mento Carlo Estimation to compute kl divergence
         # kl = log q_{\phi}(z|x) - log p_{\theta}(z)
-        post_prob = torch.sum(- epsilon ** 2 / 2 - LOG2PI - logs, dim=1) 
-        prior_prob = self.prior.log_prob(z)
-        init_prior_prob = torch.sum(self.init_prior.log_prob(z), dim=1)
+        post_prob = torch.sum(- epsilon ** 2 / 2 - LOG2PI - logs, dim=1) - logdet 
+        prior_prob = torch.sum(self.prior.log_prob(z), dim=1)
 
         kl = post_prob - prior_prob
         kl = torch.mean(kl)
@@ -72,20 +72,19 @@ class FVAE(torch.nn.Module):
         reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
 
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
-        extra_info = torch.mean(prior_prob - init_prior_prob) # D_KL(p_{\theta} || p_{\theta_{init}})
         loss = kl + reconstruction_loss
 
         return loss, {
             "NELBO" : loss.item(),
             "KL divergence" : kl.item(),
             "reconstruction loss" : reconstruction_loss.item(),
-            "extra information" : extra_info.item(),
         }
     
     def encode(self, x):
         mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
         logs = torch.clamp_max(logs, 10)
-        return mu
+        z, _ = self.flow(mu)
+        return z
 
     def decode(self, z, deterministic=True):
         _x = self.decoder(z)
@@ -100,7 +99,7 @@ class FVAE(torch.nn.Module):
 
     def sample(self, number=1000, deterministic=True):
 
-        z = self.prior.sample(num=number)
+        z = self.prior.sample((number, self.latent_dim))
 
         return self.decode(z, deterministic=deterministic)
 

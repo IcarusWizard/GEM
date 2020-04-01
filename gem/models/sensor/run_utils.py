@@ -37,8 +37,7 @@ def config_model_train(config, model_param):
             "use_mce" : config['use_mce'],
             "output_type" : config['output_type'],
         })       
-
-    elif config['model']== 'FVAE':
+    elif config['model']== 'FVAE' or config['model'] == 'PFVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
             "flow_features" : config['flow_features'],
