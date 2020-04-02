@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 
-from gem.models.sensor.run_utils import get_model_by_checkpoint
+from gem.models.sensor.run_utils import get_sensor_by_checkpoint
 from gem.utils import load_npz, create_dir
 
 MODEL_DIR = 'checkpoint/sensor'
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     image = plt.imread(input_file)
 
     checkpoint = torch.load(os.path.join(MODEL_DIR, args.checkpoint + '.pt'), map_location='cpu')
-    model = get_model_by_checkpoint(checkpoint).to(device)
+    model = get_sensor_by_checkpoint(checkpoint).to(device)
     model.requires_grad_(False)
 
     image = torch.as_tensor((image / 255.0), dtype=torch.float32).permute(2, 0, 1).unsqueeze(dim=0).to(device)

@@ -1,6 +1,6 @@
 import importlib
 
-def config_model_train(config, model_param):
+def config_sensor(config, model_param):
     model_param['network_type'] = config['network_type']
 
     if config['network_type']== 'mlp':
@@ -62,7 +62,7 @@ def config_model_train(config, model_param):
 
     return model, model_param
 
-def get_model_by_checkpoint(checkpoint):
+def get_sensor_by_checkpoint(checkpoint):
     state_dict = checkpoint['model_state_dict']
     model_param = checkpoint['model_parameters']
     name = checkpoint['config']['model']

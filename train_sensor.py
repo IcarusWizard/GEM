@@ -4,7 +4,7 @@ import torch, torchvision
 
 import os, argparse
 
-from gem.models.sensor.run_utils import config_model_train
+from gem.models.sensor.run_utils import config_sensor
 from gem.data import load_sensor_dataset
 from gem.utils import setup_seed
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     filenames, model_param, train_loader, val_loader, test_loader = load_sensor_dataset(config)
 
     # config model
-    model, model_param = config_model_train(config, model_param)
+    model, model_param = config_sensor(config, model_param)
 
     config['model_param'] = model_param
     config['log_name'] = os.path.join(LOGDIR, '{}'.format(filenames['log_name']))

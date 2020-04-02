@@ -8,7 +8,8 @@ from gem.utils import create_dir
 
 import os, argparse
 
-from gem.models.sensor.run_utils import get_model_by_checkpoint
+from gem.models.sensor.run_utils import get_sensor_by_checkpoint
+from gem.models.predictor.run_utils import config_predictor
 from gem.utils import setup_seed
 
 from gem.data import load_predictor_dataset
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     
     checkpoint = torch.load(os.path.join(SENSORDIR, args.checkpoint + '.pt'), map_location='cpu')
 
-    coder = get_model_by_checkpoint(checkpoint)
+    coder = get_sensor_by_checkpoint(checkpoint)
     coder.requires_grad_(False)
 
     config['dataset'] = checkpoint['config']['dataset']
@@ -71,29 +72,14 @@ if __name__ == '__main__':
     filenames, dataset_config, train_loader, val_loader, test_loader = load_predictor_dataset(config)
     sample_data = train_loader.dataset[0]
     config['predict_reward'] = 'reward' in sample_data.keys()
+    config['latent_dim'] = coder.latent_dim
+    config['action_dim'] = dataset_config['action']
 
-    model_param = {
-        'obs_dim' : coder.latent_dim,
-        "action_dim" : dataset_config['action'],
-        "hidden_dim" : config['hidden_dim'],
-        "action_mimic" : config['action_mimic'],
-        "predict_reward" : config['predict_reward'],
-        "decoder_config" : {
-            "hidden_layers" : config['decoder_hidden_layers'],
-            "hidden_features" : config['decoder_features'],
-            "activation" : torch.nn.ELU
-        }
-    }
-
-    if config['model'] == 'RSSM':
-        model_param['stoch_dim'] = config['stoch_dim']
+    model, model_param = config_predictor(config)
 
     config['model_param'] = model_param
     config['log_name'] = os.path.join(LOGDIR, '{}'.format(filenames['log_name']))
 
-    module = importlib.import_module('gem.models.predictor')
-    model_class = getattr(module, config['model'])
-    model = model_class(**model_param)
     trainer_class = model.get_trainer()
 
     trainer = trainer_class(model, coder, train_loader, val_loader, test_loader, config)

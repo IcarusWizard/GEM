@@ -8,7 +8,7 @@ from gem.utils import create_dir
 import os, argparse
 
 import degmo
-from gem.models.sensor.run_utils import get_model_by_checkpoint
+from gem.models.sensor.run_utils import get_sensor_by_checkpoint
 from degmo.utils import select_gpus
 
 from gem.data import make_dataset
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     checkpoint = torch.load(os.path.join(MODELDIR, args.checkpoint + '.pt'), map_location='cpu')
     config = checkpoint['config']
 
-    model = get_model_by_checkpoint(checkpoint)
+    model = get_sensor_by_checkpoint(checkpoint)
     model.requires_grad_(False)
     model = model.to(device)
 
