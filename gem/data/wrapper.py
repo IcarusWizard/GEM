@@ -72,27 +72,30 @@ class SeparateImage(torch.utils.data.Dataset):
     """
         split the sequence dataset to separate image dataset
     """
-    def __init__(self, dataset, image_per_file=1):
+    def __init__(self, dataset, image_per_file=None):
         super().__init__()
         self._dataset = dataset
         self.image_per_file = image_per_file
 
-        expr = re.compile(r'(\d+)')
+        if self.image_per_file is not None:
+            expr = re.compile(r'(\d+)')
 
-        traj_lengths = [int(expr.findall(f)[-1]) // self.image_per_file for f in self._dataset.trajlist]
-        self.length = sum(traj_lengths)
+            traj_lengths = [int(expr.findall(f)[-1]) // self.image_per_file for f in self._dataset.trajlist]
+            self.length = sum(traj_lengths)
 
-        self.sample_order = []
-        for l in traj_lengths:
-            order = list(range(l*self.image_per_file))
-            random.shuffle(order)
-            self.sample_order.append(order)
+            self.sample_order = []
+            for l in traj_lengths:
+                order = list(range(l*self.image_per_file))
+                random.shuffle(order)
+                self.sample_order.append(order)
 
-        self.cumulate_lengths = [0]
-        length = 0
-        for l in traj_lengths:
-            length += l
-            self.cumulate_lengths.append(length)
+            self.cumulate_lengths = [0]
+            length = 0
+            for l in traj_lengths:
+                length += l
+                self.cumulate_lengths.append(length)
+        else:
+            self.length = len(self._dataset)
 
     def __getattr__(self, name):
         return getattr(self._dataset, name)
@@ -101,22 +104,25 @@ class SeparateImage(torch.utils.data.Dataset):
         return self.length
 
     def __getitem__(self, index):
-        max_index = len(self.cumulate_lengths) - 1
-        min_index = 0
-        traj_index = (max_index + min_index) // 2
-        while not (self.cumulate_lengths[traj_index] <= index and index < self.cumulate_lengths[traj_index + 1]):
-            if self.cumulate_lengths[traj_index] > index: # search left
-                max_index = traj_index
-            else: # search right
-                min_index = traj_index
+        if self.image_per_file is not None:
+            max_index = len(self.cumulate_lengths) - 1
+            min_index = 0
             traj_index = (max_index + min_index) // 2
+            while not (self.cumulate_lengths[traj_index] <= index and index < self.cumulate_lengths[traj_index + 1]):
+                if self.cumulate_lengths[traj_index] > index: # search left
+                    max_index = traj_index
+                else: # search right
+                    min_index = traj_index
+                traj_index = (max_index + min_index) // 2
 
-        index_in_traj = index - self.cumulate_lengths[traj_index]
-        
-        data = self._dataset[traj_index]
-        selected_index = self.sample_order[traj_index][index_in_traj*self.image_per_file:(index_in_traj+1)*self.image_per_file]
-        
-        return (data['image'][selected_index], )
+            index_in_traj = index - self.cumulate_lengths[traj_index]
+            
+            data = self._dataset[traj_index]
+            selected_index = self.sample_order[traj_index][index_in_traj*self.image_per_file:(index_in_traj+1)*self.image_per_file]
+            
+            return (data['image'][selected_index], )
+        else:
+            return (self._dataset[index]['image'], )
 
 class KeyMap(torch.utils.data.Dataset):
     """ 
@@ -166,6 +172,35 @@ class ToTensor(torch.utils.data.Dataset):
             new_data = {k : torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
         return new_data    
+
+class Preload(torch.utils.data.Dataset):
+    """
+        preload the whole dataset into memory
+    """
+    def __init__(self, dataset):
+        super().__init__()
+        self._dataset = dataset
+
+        print('Preloading ......')
+        self.data = []
+        for i in range(len(self._dataset)):
+            data = self._dataset[i]
+            if isinstance(data, dict): # sequence
+                self.data.append(data)
+            elif isinstance(data, tuple):
+                data = data[0]
+                for j in range(data.shape[0]):
+                    self.data.append(data[j])
+        print('Preloading complete!')
+
+    def __getattr__(self, name):
+        return getattr(self._dataset, name)
+
+    def __len__(self):
+        return len(self._dataset)
+
+    def __getitem__(self, index):        
+        return (self.data[index], )    
 
 def multiple_wrappers(wrapper_list):
     def wrapper(dataset):

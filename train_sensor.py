@@ -41,6 +41,7 @@ if __name__ == '__main__':
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
     train_parser.add_argument('--batch_size', type=int, default=32)
     train_parser.add_argument('--image_per_file', type=int, default=2)
+    train_parser.add_argument('--preload', action='store_true')
     train_parser.add_argument('--gpu', type=str, default='0')
     train_parser.add_argument('--workers', type=int, default=9999,
                               help='how many workers use for dataloader, default is ALL')

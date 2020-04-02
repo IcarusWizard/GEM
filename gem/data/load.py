@@ -6,17 +6,18 @@ import torchvision
 
 from .bair_push import load_bair_push, load_bair_push_seq
 from .base import SequenceDataset
-from .wrapper import ActionShift, SeparateImage, KeyMap, Split, ToTensor, multiple_wrappers
+from .wrapper import ActionShift, SeparateImage, KeyMap, Split, ToTensor, Preload, multiple_wrappers
 
 DATAROOT = './dataset'
 
 def load_sensor_dataset(config, batch_size=None):
     name = config['dataset']
     image_per_file = config['image_per_file']
+    preload = config['preload']
     if name == 'bair_push':
         trainset, valset, testset, model_param = load_bair_push(image_per_file=image_per_file)
     else:
-        trainset, valset, testset, model_param =  load_env_dataset(name, image_per_file=image_per_file)
+        trainset, valset, testset, model_param =  load_env_dataset(name, preload=preload, image_per_file=image_per_file)
 
     workers = min(config['workers'], os.cpu_count()) # compute actual workers in use
     
@@ -39,7 +40,7 @@ def load_sensor_dataset(config, batch_size=None):
 
     return filenames, model_param, train_loader, val_loader, test_loader
 
-def load_env_dataset(name, image_per_file):
+def load_env_dataset(name, preload, image_per_file):
     datadir = os.path.join(DATAROOT, name)
 
     if not os.path.exists(datadir):
@@ -51,10 +52,17 @@ def load_env_dataset(name, image_per_file):
         "w" : 64,
     }
 
-    wrapper = multiple_wrappers([
-        partial(SeparateImage, image_per_file=image_per_file),
-        ToTensor,
-    ]) 
+    if preload:
+        wrapper = multiple_wrappers([
+            partial(SeparateImage, image_per_file=None),
+            Preload,
+            ToTensor,
+        ])         
+    else:
+        wrapper = multiple_wrappers([
+            partial(SeparateImage, image_per_file=image_per_file),
+            ToTensor,
+        ]) 
 
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))
