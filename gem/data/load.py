@@ -74,21 +74,24 @@ def load_predictor_dataset(config, batch_size=None):
     name = config['dataset']
     horizon = config['horizon']
     fix_start = config['fix_start']
+    preload = config['preload']
+
+    workers = min(config['workers'], os.cpu_count()) # compute actual workers in use
 
     if name == 'bair_push':
         trainset, valset, testset, model_param = load_bair_push_seq(horizon=horizon, fix_start=fix_start)
     else:
-        trainset, valset, testset, model_param =  load_env_dataset_seq(name, horizon, fix_start)
-
-    workers = min(config['workers'], os.cpu_count()) # compute actual workers in use
+        trainset, valset, testset, model_param =  load_env_dataset_seq(name, horizon, fix_start, preload)
+        if preload:
+            workers = 0 # you dont need multi-loader when preloaded the whole dataset
     
     if batch_size is None:
         batch_size = config['batch_size']
 
     isampler = InfiniteSampler(trainset)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, sampler=isampler, num_workers=workers, pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, num_workers=workers, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, num_workers=workers, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(valset, batch_size=min(batch_size, len(valset)), num_workers=workers, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(testset, batch_size=min(batch_size, len(testset)), num_workers=workers, pin_memory=True)
 
     filenames = {
         "log_name" : "{}_{}".format(config['model'], config['checkpoint']),
@@ -101,16 +104,23 @@ def load_predictor_dataset(config, batch_size=None):
 
     return filenames, model_param, train_loader, val_loader, test_loader
 
-def load_env_dataset_seq(name, horizon, fix_start):
+def load_env_dataset_seq(name, horizon, fix_start, preload):
     datadir = os.path.join(DATAROOT, name)
 
     if not os.path.exists(datadir):
         raise ValueError('Please run generate dataset first')
-
-    wrapper = multiple_wrappers([
-        partial(Split, horizon=horizon, fix_start=fix_start),
-        ToTensor,
-    ]) 
+    
+    if preload:
+        wrapper = multiple_wrappers([
+            Preload,
+            partial(Split, horizon=horizon, fix_start=fix_start),
+            ToTensor,
+        ])     
+    else:
+        wrapper = multiple_wrappers([
+            partial(Split, horizon=horizon, fix_start=fix_start),
+            ToTensor,
+        ]) 
 
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))

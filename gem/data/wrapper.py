@@ -192,6 +192,7 @@ class Preload(torch.utils.data.Dataset):
                 for j in range(data.shape[0]):
                     self.data.append(data[j])
         print('Preloading complete!')
+        self.dtype = type(self.data[0])
 
     def __getattr__(self, name):
         return getattr(self._dataset, name)
@@ -199,8 +200,11 @@ class Preload(torch.utils.data.Dataset):
     def __len__(self):
         return len(self._dataset)
 
-    def __getitem__(self, index):        
-        return (self.data[index], )    
+    def __getitem__(self, index):    
+        if self.dtype == dict:
+            return self.data[index]
+        else:    
+            return (self.data[index], )    
 
 def multiple_wrappers(wrapper_list):
     def wrapper(dataset):

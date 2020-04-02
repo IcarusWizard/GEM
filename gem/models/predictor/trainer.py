@@ -87,7 +87,7 @@ class PredictorTrainer(Trainer):
                 generation = self.model.generate(obs0, obs.shape[0])
                 generated_obs = generation['obs']
                 generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))
-                generated_video = generated_video.view(*obs.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
+                generated_video = generated_video.view(obs.shape[0], -1, *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
                 self.writer.add_video('prior_video_fake_action', generated_video, global_step=step, fps=self.config['fps'])
 
         self.writer.flush()
