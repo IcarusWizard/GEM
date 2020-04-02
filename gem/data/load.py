@@ -22,7 +22,7 @@ def load_sensor_dataset(config, batch_size=None):
     workers = min(config['workers'], os.cpu_count()) # compute actual workers in use
     
     if batch_size is None:
-        batch_size = config['batch_size'] // config['image_per_file']
+        batch_size = config['batch_size'] if preload else config['batch_size'] // config['image_per_file']
 
     isampler = InfiniteSampler(trainset)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, sampler=isampler, num_workers=workers, pin_memory=True)
