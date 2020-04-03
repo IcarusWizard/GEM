@@ -198,7 +198,7 @@ class Preload(torch.utils.data.Dataset):
         return getattr(self._dataset, name)
 
     def __len__(self):
-        return len(self._dataset)
+        return len(self.data)
 
     def __getitem__(self, index):    
         if self.dtype == dict:
