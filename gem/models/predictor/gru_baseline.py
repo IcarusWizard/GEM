@@ -54,7 +54,9 @@ class GRUBaseline(torch.nn.Module):
             obs_dis = Normal(obs_mu, torch.exp(obs_logs))
             pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
 
-            pre_obs.append(obs_mu)
+            _obs = obs_dis.rsample()
+
+            pre_obs.append(_obs)
 
             if self.action_minic:
                 pre_action.append(self.action_pre(h.detach()))
