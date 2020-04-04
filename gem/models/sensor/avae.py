@@ -39,11 +39,11 @@ class AVAE(torch.nn.Module):
             self.decoder = ConvDecoder(output_c, h, w, latent_dim, **config)
             self.discriminator = torch.nn.Sequential(
                 torch.nn.Conv2d(c, 32, 3, 1, padding=1),
-                torch.nn.ReLU(True),
+                torch.nn.LeakyReLU(0.1, True),
                 torch.nn.Conv2d(32, 64, 3, 1, padding=1),
-                torch.nn.ReLU(True),
+                torch.nn.LeakyReLU(0.1, True),
                 torch.nn.Conv2d(64, 128, 3, 1, padding=1),
-                torch.nn.ReLU(True),
+                torch.nn.LeakyReLU(0.1, True),
                 torch.nn.Conv2d(128, 1, 1, 1),
                 torch.nn.Softplus()
             )
