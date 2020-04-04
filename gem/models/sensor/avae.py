@@ -47,6 +47,9 @@ class AVAE(torch.nn.Module):
                 torch.nn.Conv2d(128, 1, 1, 1),
                 torch.nn.Softplus()
             )
+            for k, v in self.discriminator.state_dict().items():
+                if '6' in k:
+                    v.data.fill_(0)
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
         
