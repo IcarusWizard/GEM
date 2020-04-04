@@ -30,7 +30,7 @@ def config_sensor(config, model_param):
         else:
             model_param['config']['res_layers'] = config['res_layers']
 
-    if config['model']== 'VAE' or config['model'] == 'CVAE' or config['model'] == 'AVAE':
+    if config['model']== 'VAE' or config['model'] == 'CVAE' or config['model'] == 'AVAE' or config['model'] == 'SWVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
             "output_type" : config['output_type'],
