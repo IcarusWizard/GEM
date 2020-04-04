@@ -160,7 +160,8 @@ class AVAETrainer(Trainer):
             reconstructions = torch.clamp(self.model.decode(self.model.encode(input_imgs)), 0, 1)
             inputs_and_reconstructions = torch.stack([input_imgs, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
             self.writer.add_images('inputs_and_reconstructions', inputs_and_reconstructions, global_step=step)
-            self.writer.add_images('mask', self.last_mask, global_step=step)
+            mask_max = torch.max(torch.max(self.last_mask, dim=2, keepdim=True)[0], dim=3, keepdim=True)[0]
+            self.writer.add_images('mask', self.last_mask / mask_max, global_step=step)
 
     def test_whole(self, loader):
         with torch.no_grad():
