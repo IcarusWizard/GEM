@@ -112,7 +112,7 @@ class AVAETrainer(Trainer):
         for i in range(self.config['n_critic']):
             real = self.parse_batch(next(self.train_iter))
 
-            loss, info = self.model(real)
+            loss, mask, info = self.model(real)
             discriminator_loss = -loss
 
             self.discriminator_optim.zero_grad()
@@ -121,7 +121,7 @@ class AVAETrainer(Trainer):
 
         # train generator only once
         real = self.parse_batch(next(self.train_iter))
-        generator_loss, info = self.model(real)
+        generator_loss, mask, info = self.model(real)
 
         self.coder_optim.zero_grad()
         generator_loss.backward()
@@ -130,6 +130,7 @@ class AVAETrainer(Trainer):
         self.last_discriminator_loss = discriminator_loss.item()
         self.last_train_loss = generator_loss.item()
         self.last_train_info = info
+        self.last_mask = mask.detach()
 
     def log_step(self, step):
         val_loss, val_info = self.test_whole(self.val_loader)
@@ -159,6 +160,7 @@ class AVAETrainer(Trainer):
             reconstructions = torch.clamp(self.model.decode(self.model.encode(input_imgs)), 0, 1)
             inputs_and_reconstructions = torch.stack([input_imgs, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
             self.writer.add_images('inputs_and_reconstructions', inputs_and_reconstructions, global_step=step)
+            self.writer.add_images('mask', self.last_mask, global_step=step)
 
     def test_whole(self, loader):
         with torch.no_grad():
@@ -168,7 +170,7 @@ class AVAETrainer(Trainer):
             for batch in iter(loader):
                 num += 1
                 batch = self.parse_batch(next(self.train_iter))
-                _loss, _info = self.model(batch)
+                _loss, _mask, _info = self.model(batch)
                 loss += _loss
                 for k in _info.keys():
                     info[k] = info.get(k, 0) + _info[k]

@@ -44,7 +44,7 @@ class AVAE(torch.nn.Module):
                 torch.nn.ReLU(True),
                 torch.nn.Conv2d(64, 128, 3, 1, padding=1),
                 torch.nn.ReLU(True),
-                torch.nn.Conv2d(128, c, 1, 1)
+                torch.nn.Conv2d(128, 1, 1, 1)
             )
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
@@ -72,18 +72,19 @@ class AVAE(torch.nn.Module):
         reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
 
         mask = self.discriminator(x)
+        mask_shape = mask.shape
         mask = mask.view(mask.shape[0], -1)
         mask = F.softmax(mask, dim=1)
-        mask = mask.view(*reconstruction_loss.shape)
+        mask = mask.view(*mask_shape)
 
-        reconstruction_loss = torch.sum(reconstruction_loss * mask * np.prod(mask.shape[1:]), dim=(1, 2, 3))
+        reconstruction_loss = torch.sum(reconstruction_loss * mask * np.prod(mask.shape[2:]), dim=(1, 2, 3))
         reconstruction_loss = torch.mean(reconstruction_loss)
 
         kl = torch.mean(kl)
 
         loss = kl + reconstruction_loss
 
-        return loss, {
+        return loss, mask, {
             "NELBO" : loss.item(),
             "KL divergence" : kl.item(),
             "reconstruction loss" : reconstruction_loss.item(),
