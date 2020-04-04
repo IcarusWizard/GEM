@@ -112,7 +112,8 @@ class AVAETrainer(Trainer):
         for i in range(self.config['n_critic']):
             real = self.parse_batch(next(self.train_iter))
 
-            discriminator_loss = self.model.get_discriminator_loss(real)
+            loss, info = self.model(real)
+            discriminator_loss = -loss
 
             self.discriminator_optim.zero_grad()
             discriminator_loss.backward()
