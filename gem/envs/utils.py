@@ -4,6 +4,7 @@ from .wrapper import *
 
 from .artai import Atari
 from .dmc import DeepMindControl
+from .robos import Robosuite
 
 from ..utils import save_npz
 
@@ -18,6 +19,9 @@ def make_env(config):
             task, config['action_repeat'], (64, 64), grayscale=False,
             life_done=True, sticky_actions=True)
         env = OneHotAction(env)
+    elif suite == 'robos':
+        env = Robosuite(task)
+        env = ActionRepeat(env, config['action_repeat'])
     else:
         raise NotImplementedError(suite)
 
