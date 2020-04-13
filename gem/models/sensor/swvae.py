@@ -82,6 +82,7 @@ class SWVAE(torch.nn.Module):
         if kl < self.free_nats:
             kl = kl.detach()
 
+        old_reconstruction_loss = torch.mean(torch.sum(reconstruction_loss.detach(), dim=(1, 2, 3)))
         rshape = reconstruction_loss.shape
         weight = reconstruction_loss.detach().view(reconstruction_loss.shape[0], -1)
         weight = torch.softmax(weight, dim=-1) * np.prod(rshape[1:])
@@ -92,9 +93,10 @@ class SWVAE(torch.nn.Module):
         loss = kl + reconstruction_loss
 
         return loss, {
-            "NELBO" : loss.item(),
+            "NELBO" : (kl + old_reconstruction_loss).item(),
             "KL divergence" : kl.item(),
             "reconstruction loss" : reconstruction_loss.item(),
+            "old reconstruction loss" : old_reconstruction_loss.item(),
         }
     
     def encode(self, x):
