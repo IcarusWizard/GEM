@@ -1,6 +1,6 @@
 import torch
 
-from degmo.base import Trainer
+from gem.models.base import Trainer
 from degmo.utils import nats2bits
 
 class PredictorTrainer(Trainer):

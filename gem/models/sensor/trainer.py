@@ -1,5 +1,5 @@
 import torch
-from degmo.base import Trainer
+from gem.models.base import Trainer
 from itertools import chain
 
 from degmo.utils import nats2bits
