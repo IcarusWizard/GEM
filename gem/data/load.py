@@ -46,12 +46,6 @@ def load_env_dataset(name, preload, image_per_file):
     if not os.path.exists(datadir):
         raise ValueError('Please run generate dataset first')
 
-    config = {
-        "c" : 3,
-        "h" : 64,
-        "w" : 64,
-    }
-
     if preload:
         wrapper = multiple_wrappers([
             partial(SeparateImage, image_per_file=None),
@@ -67,6 +61,13 @@ def load_env_dataset(name, preload, image_per_file):
     trainset = wrapper(SequenceDataset(os.path.join(datadir, 'train')))
     valset = wrapper(SequenceDataset(os.path.join(datadir, 'val')))
     testset = wrapper(SequenceDataset(os.path.join(datadir, 'test')))
+
+    image = trainset[0][0]
+    config = {
+        "c" : image.shape[-3],
+        "h" : image.shape[-2],
+        "w" : image.shape[-1],
+    }
 
     return (trainset, valset, testset, config)
 
