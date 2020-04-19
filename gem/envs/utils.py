@@ -2,24 +2,23 @@ import os, time
 
 from .wrapper import *
 
-from .artai import Atari
-from .dmc import DeepMindControl
-from .robos import Robosuite
-
 from ..utils import save_npz
 
 def make_env(config):
     suite, task = config['env'].split('_', 1)
     if suite == 'dmc':
+        from .dmc import DeepMindControl
         env = DeepMindControl(task)
         env = ActionRepeat(env, config['action_repeat'])
         env = NormalizeActions(env)
     elif suite == 'atari':
+        from .artai import Atari
         env = Atari(
             task, config['action_repeat'], (64, 64), grayscale=False,
             life_done=True, sticky_actions=True)
         env = OneHotAction(env)
     elif suite == 'robos':
+        from .robos import Robosuite
         env = Robosuite(task)
         env = ActionRepeat(env, config['action_repeat'])
     else:
