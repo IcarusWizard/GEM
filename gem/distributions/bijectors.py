@@ -2,7 +2,7 @@ import torch
 from torch.functional import F
 import re
 
-from degmo.modules import MLP
+from gem.modules import MLP
 
 EPS = 1e-8
 

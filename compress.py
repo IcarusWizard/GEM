@@ -7,9 +7,8 @@ from gem.utils import create_dir
 
 import os, argparse
 
-import degmo
 from gem.models.sensor.run_utils import get_sensor_by_checkpoint
-from degmo.utils import select_gpus
+from gem.utils import select_gpus
 
 from gem.data import make_dataset
 

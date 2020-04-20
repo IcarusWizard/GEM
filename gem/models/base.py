@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 
-from degmo.utils import select_gpus, step_loader
+from gem.utils import select_gpus, step_loader
 from torch.utils.tensorboard import SummaryWriter
 
 class Trainer(object):

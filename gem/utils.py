@@ -19,6 +19,16 @@ def select_gpus(gpus="0"):
     ''' 
     os.environ['CUDA_VISIBLE_DEVICES'] = gpus
 
+def step_loader(dataloder):
+    data = iter(dataloder)
+    while True:
+        try:
+            x = next(data)
+        except:
+            data = iter(dataloder)
+            x = next(data)
+        yield x
+
 def nats2bits(nats):
     return nats / np.log(2)
 

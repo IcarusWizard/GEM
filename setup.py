@@ -14,7 +14,6 @@ setup(
     py_modules=['gem'],
     version=__version__,
     install_requires=[
-        'degmo',
         'torch>=1.0',
         'torchvision',
         'numpy==1.16.0',

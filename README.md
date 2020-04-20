@@ -7,10 +7,6 @@ Recommend to setup with Anaconda
 # In your virtual environment
 git clone --recurse https://github.com/IcarusWizard/GEM
 cd GEM
-# Install degmo
-cd degmo
-pip install -e .
-cd .. 
 # Install other dependencies
 pip install -r requirement.txt
 # Reinstall tensorboard
