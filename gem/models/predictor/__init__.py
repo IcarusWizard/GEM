@@ -1,2 +1,2 @@
-from .gru_baseline import GRUBaseline
+from .rar import RAR
 from .rssm import RSSM

@@ -4,7 +4,7 @@ from gem.distributions import Normal
 from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
-class GRUBaseline(torch.nn.Module):
+class RAR(torch.nn.Module):
     def __init__(self, obs_dim, action_dim, hidden_dim, action_mimic=False, predict_reward=True, 
                  decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()

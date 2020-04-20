@@ -20,7 +20,7 @@ DATADIR = './dataset'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='GRUBaseline')
+    parser.add_argument('--model', type=str, default='RSSM')
     parser.add_argument('--checkpoint', type=str)
 
     model_parser = parser.add_argument_group('model', 'parameters for model config')
@@ -33,8 +33,8 @@ if __name__ == '__main__':
 
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')
-    train_parser.add_argument('--batch_size', type=int, default=32)
-    train_parser.add_argument('--horizon', type=int, default=30)
+    train_parser.add_argument('--batch_size', type=int, default=64)
+    train_parser.add_argument('--horizon', type=int, default=50)
     train_parser.add_argument('--fix_start', action='store_true')
     train_parser.add_argument('--preload', action='store_true')
     train_parser.add_argument('--gpu', type=str, default='0')
