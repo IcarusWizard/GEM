@@ -33,16 +33,17 @@ def config_sensor(config, model_param):
     if config['model']== 'VAE' or config['model'] == 'CVAE' or config['model'] == 'AVAE' or config['model'] == 'SWVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
-            "output_type" : config['output_type'],
-            "use_mce" : config['use_mce'],
+            "output_type" : config['output_type']
         })       
     elif config['model']== 'FVAE' or config['model'] == 'PFVAE':
         model_param.update({
             "latent_dim" : config['latent_dim'],
             "output_type" : config['output_type'],
-            "flow_features" : config['flow_features'],
-            "flow_hidden_layers" : config['flow_hidden_layers'],
-            "flow_num_transformation" : config['flow_num_transformation'],
+            "flow_config" : {
+                "features" : config['flow_features'],
+                "hidden_layers" : config['flow_hidden_layers'],
+                "num_transformation" : config['flow_num_transformation'],
+            }
         })        
     elif config['model']== 'VQ-VAE':
         if not config['network_type']== 'fullconv':

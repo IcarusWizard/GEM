@@ -2,11 +2,12 @@ import torch
 from torch.functional import F
 import numpy as np
 
-from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
 from .trainer import VAETrainer
 
+from gem.modules.encoder import ConvEncoder
+from gem.modules.decoder import ConvDecoder
 from gem.distributions.utils import get_kl
-from gem.distributions import Normal, Bernoulli 
+from gem.distributions import Normal
 
 class CVAE(torch.nn.Module):
     r"""
@@ -21,24 +22,17 @@ class CVAE(torch.nn.Module):
             network_type : str, type of the encoder and decoder, choose from conv and mlp, default: conv
             config : dict, parameters for constructe encoder and decoder
             output_type : str, type of the distribution p(x|z), choose from fix_std(std=1) and gauss, default: gauss
-            use_mce : bool, whether to compute KL by Mento Carlo Estimation, default: False
     """
-    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={},
-                 output_type='gauss', use_mce=False):
+    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={}, output_type='gauss'):
         super().__init__()
         self.latent_dim = latent_dim
         self.free_nats = free_nats
         self.output_type = output_type
-        self.use_mce = use_mce
         self.input_dim = c * h * w
-        output_c = 2 * c if self.output_type == 'gauss' else c
 
-        if network_type == 'mlp':
-            self.encoder = MLPEncoder(c, h, w, latent_dim, **config)
-            self.decoder = MLPDecoder(output_c, h, w, latent_dim, **config)
-        elif network_type == 'conv':
+        if network_type == 'conv':
             self.encoder = ConvEncoder(c, h, w, latent_dim, **config)
-            self.decoder = ConvDecoder(output_c, h, w, latent_dim, **config)
+            self.decoder = ConvDecoder(c, h, w, latent_dim, dist_type=output_type, **config)
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
         
@@ -83,38 +77,23 @@ class CVAE(torch.nn.Module):
         }
     
     def encode(self, x, output_dist=False):
-        mu, std = torch.chunk(self.encoder(x), 2, dim=1)
-        std = F.softplus(std) + 1e-4
-        dist = Normal(mu, std)
+        dist = self.encoder(x)
         return dist if output_dist else dist.mode()
 
     def decode(self, z, output_dist=False):
-        _x = self.decoder(z)
-
-        if self.output_type == 'fix_std':
-            # output is a gauss with a fixed 1 variance,
-            # reconstruction loss is mse plus constant
-            dist = Normal(_x, 1)
-
-        elif self.output_type == 'gauss':
-            # output is a gauss with diagonal variance
-            _mu, _logs = torch.chunk(_x, 2, dim=1)
-            _logs = torch.tanh(_logs)
-            dist = Normal(_mu, torch.exp(_logs))
-
-        elif self.output_type == 'bernoulli':
-            # output is the logit of a bernouli distribution,
-            # reconstruction loss is cross-entropy
-            p = torch.sigmoid(_x)
-            dist = Bernoulli(p)
-
+        dist = self.decoder(z)
         return dist if output_dist else dist.mode()
 
     def sample(self, number=1000):
-        prior = Normal(self.prior_mean, self.prior_std, with_batch=False)
-        z = prior.sample(number)
-
+        z = self.sample_prior(number)
         return self.decode(z)
+
+    def sample_prior(self, number=1000):
+        prior = self.get_prior()
+        return prior.sample(number)    
+
+    def get_prior(self):
+        return Normal(self.prior_mean, self.prior_std, with_batch=False)
 
     def get_trainer(self):
         return VAETrainer
