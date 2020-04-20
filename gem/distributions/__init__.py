@@ -1,1 +1,4 @@
-from .flow import FlowDistribution1D
+from .normal import Normal
+from .bernoulli import Bernoulli
+
+from .bijectors import *

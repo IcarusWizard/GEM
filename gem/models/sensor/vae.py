@@ -3,8 +3,10 @@ from torch.functional import F
 import numpy as np
 
 from degmo.vae.modules import MLPEncoder, MLPDecoder, ConvEncoder, ConvDecoder
-from degmo.vae.utils import get_kl, LOG2PI
 from .trainer import VAETrainer
+
+from gem.distributions.utils import get_kl
+from gem.distributions import Normal, Bernoulli 
 
 class VAE(torch.nn.Module):
     r"""
@@ -20,7 +22,6 @@ class VAE(torch.nn.Module):
             network_type : str, type of the encoder and decoder, choose from conv and mlp, default: conv
             config : dict, parameters for constructe encoder and decoder
             output_type : str, type of the distribution p(x|z), choose from fix_std(std=1), gauss and bernoulli, default: gauss
-            use_mce : bool, whether to compute KL by Mento Carlo Estimation, default: False
     """
     def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={}, 
                  output_type='gauss', use_mce=False):
@@ -41,48 +42,33 @@ class VAE(torch.nn.Module):
         else:
             raise ValueError('unsupport network type: {}'.format(network_type))
         
-        self.prior = torch.distributions.Normal(0, 1)
+        self.register_buffer('prior_mean', torch.zeros(self.latent_dim))
+        self.register_buffer('prior_std', torch.ones(self.latent_dim))
 
     def forward(self, x):
-        mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
-        logs = torch.clamp_max(logs, 10) # limit the max logs, prevent inf in kl
+        # encode
+        posterior = self.encode(x, output_dist=True)
 
         # reparameterize trick
-        epsilon = torch.randn_like(logs)
-        z = mu + epsilon * torch.exp(logs)
+        z = posterior.sample()
 
         # compute kl divergence
-        if self.use_mce: # Use Mento Carlo Estimation
-            # kl = log q_{\phi}(z|x) - log p_{\theta}(z)
-            kl = torch.sum(- epsilon ** 2 / 2 - LOG2PI - logs - self.prior.log_prob(z), dim=1)
-        else:
-            kl = get_kl(mu, logs)
-
-        _x = self.decoder(z)
-
-        # compute reconstruction loss
-        if self.output_type == 'fix_std':
-            # output is a gauss with a fixed 1 variance,
-            # reconstruction loss is mse plus constant
-            reconstruction_loss = (x - _x) ** 2 / 2 + LOG2PI
-
-        elif self.output_type == 'gauss':
-            # output is a gauss with diagonal variance
-            _mu, _logs = torch.chunk(_x, 2, dim=1)
-            _logs = torch.tanh(_logs)
-            reconstruction_loss = (x - _mu) ** 2 / 2 * torch.exp(-2 * _logs) + LOG2PI + _logs
-
-        elif self.output_type == 'bernoulli':
-            # output is the logit of a bernouli distribution,
-            # reconstruction loss is cross-entropy
-            p = torch.sigmoid(_x)
-            reconstruction_loss = - x * torch.log(p + 1e-8) - (1 - x) * torch.log(1 - p + 1e-8)
-
+        prior = Normal(self.prior_mean, self.prior_std, with_batch=False)
+        kl = get_kl(posterior, prior)
+        # stop gradient when kl lower than free nats
+        kl = torch.sum(kl, dim=1)
         kl = torch.mean(kl)
         if kl < self.free_nats:
             kl = kl.detach()
-            
-        reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+
+        # decode
+        output_dist = self.decode(z, output_dist=True)
+
+        # compute reconstruction_loss
+        reconstruction_loss = - output_dist.log_prob(x)
+        reconstruction_loss = torch.sum(reconstruction_loss, dim=(1, 2, 3))
+        reconstruction_loss = torch.mean(reconstruction_loss)
+        
         loss = kl + reconstruction_loss
 
         return loss, {
@@ -91,41 +77,39 @@ class VAE(torch.nn.Module):
             "reconstruction loss" : reconstruction_loss.item(),
         }
     
-    def encode(self, x):
-        mu, logs = torch.chunk(self.encoder(x), 2, dim=1)
-        logs = torch.clamp_max(logs, 10)
-        return mu
+    def encode(self, x, output_dist=False):
+        mu, std = torch.chunk(self.encoder(x), 2, dim=1)
+        std = F.softplus(std) + 1e-4
+        dist = Normal(mu, std)
+        return dist if output_dist else dist.mode()
 
-    def decode(self, z, deterministic=True):
+    def decode(self, z, output_dist=False):
         _x = self.decoder(z)
 
         if self.output_type == 'fix_std':
-            x = _x
-            if not deterministic:
-                x = x + torch.randn_like(x)
+            # output is a gauss with a fixed 1 variance,
+            # reconstruction loss is mse plus constant
+            dist = Normal(_x, 1)
 
         elif self.output_type == 'gauss':
+            # output is a gauss with diagonal variance
             _mu, _logs = torch.chunk(_x, 2, dim=1)
             _logs = torch.tanh(_logs)
-            x = _mu
-            if not deterministic:
-                x = x + torch.exp(_logs) * torch.randn_like(x)
+            dist = Normal(_mu, torch.exp(_logs))
 
         elif self.output_type == 'bernoulli':
+            # output is the logit of a bernouli distribution,
+            # reconstruction loss is cross-entropy
             p = torch.sigmoid(_x)
-            if not deterministic:
-                x = (torch.rand_like(p) < p).float()
-            else:
-                x = (p > 0.5).float()
+            dist = Bernoulli(p)
 
-        return x
+        return dist if output_dist else dist.mode()
 
-    def sample(self, number=1000, deterministic=True):
-        device = next(self.parameters()).device
+    def sample(self, number=1000):
+        prior = Normal(self.prior_mean, self.prior_std, with_batch=False)
+        z = prior.sample(number)
 
-        z = torch.randn(number, self.latent_dim, device=device)
-
-        return self.decode(z, deterministic=deterministic)
+        return self.decode(z)
 
     def get_trainer(self):
         return VAETrainer

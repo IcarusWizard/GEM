@@ -47,7 +47,7 @@ class VAETrainer(Trainer):
                                     'val' : nats2bits(val_info[k])}, global_step=step)
         
         with torch.no_grad():
-            imgs = torch.clamp(self.model.sample(64, deterministic=True), 0, 1)
+            imgs = torch.clamp(self.model.sample(64), 0, 1)
             self.writer.add_images('samples', imgs, global_step=step)
             batch = self.parse_batch(next(self.train_iter))
             input_imgs = batch[:32]
