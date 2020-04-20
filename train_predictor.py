@@ -4,10 +4,9 @@ import torch, torchvision
 from tqdm import tqdm
 import importlib
 
-from gem.utils import create_dir
-
 import os, argparse
 
+from gem.utils import create_dir
 from gem.models.sensor.run_utils import get_sensor_by_checkpoint
 from gem.models.predictor.run_utils import config_predictor
 from gem.utils import setup_seed
@@ -29,7 +28,8 @@ if __name__ == '__main__':
     model_parser.add_argument('--stoch_dim', type=int, default=32)
     model_parser.add_argument('--decoder_hidden_layers', type=int, default=2)
     model_parser.add_argument('--decoder_features', type=int, default=512)
-    model_parser.add_argument('--action_mimic', type=bool, default=True)
+    model_parser.add_argument('--decoder_activation', type=str, default='elu')
+    model_parser.add_argument('--action_mimic', type=bool, default=False)
 
     train_parser = parser.add_argument_group('training', "parameters for training config")
     train_parser.add_argument('--seed', type=int, default=None, help='manuall random seed')

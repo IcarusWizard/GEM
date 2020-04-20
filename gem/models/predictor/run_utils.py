@@ -10,8 +10,8 @@ def config_predictor(config):
         "predict_reward" : config['predict_reward'],
         "decoder_config" : {
             "hidden_layers" : config['decoder_hidden_layers'],
-            "hidden_features" : config['decoder_features'],
-            "activation" : torch.nn.ELU
+            "features" : config['decoder_features'],
+            "activation" : config['decoder_activation']
         }
     }
 

@@ -1,30 +1,30 @@
 import torch
-from torch.distributions import Normal
 
-from degmo.modules import MLP
+from gem.distributions import Normal
+from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class GRUBaseline(torch.nn.Module):
-    def __init__(self, obs_dim, action_dim, hidden_dim, action_mimic=True, predict_reward=True, 
-                 decoder_config={"hidden_layers" : 2, "hidden_features" : 512, "activation" : torch.nn.ELU}):
+    def __init__(self, obs_dim, action_dim, hidden_dim, action_mimic=False, predict_reward=True, 
+                 decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.hidden_dim = hidden_dim
-        self.action_minic = action_dim
+        self.action_minic = action_mimic
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
 
         self.rnn_cell = torch.nn.GRUCell(obs_dim + action_dim, hidden_dim)
 
-        self.obs_pre = MLP(hidden_dim, 2 * obs_dim, **decoder_config)
+        self.obs_pre = MLPDecoder(hidden_dim, obs_dim, **decoder_config)
         
         if self.action_minic:
-            self.action_pre = MLP(hidden_dim, action_dim, **decoder_config)
+            self.action_pre = ActionDecoder(hidden_dim, action_dim, **decoder_config)
 
         if self.predict_reward:
-            self.reward_pre = MLP(hidden_dim, 1, **decoder_config)
+            self.reward_pre = MLPDecoder(hidden_dim, 1, dist_type='fix_std', **decoder_config)
 
     def forward(self, obs, action, reward=None):
         """
@@ -49,26 +49,24 @@ class GRUBaseline(torch.nn.Module):
             _obs = obs[i]
             _action = action[i]
 
-            obs_mu, obs_logs = torch.chunk(self.obs_pre(h), 2, dim=1)
-            obs_logs = torch.tanh(obs_logs)
-            obs_dis = Normal(obs_mu, torch.exp(obs_logs))
-            pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
+            obs_dist = self.obs_pre(h)
+            pre_obs_loss -= torch.sum(obs_dist.log_prob(_obs))
 
-            _obs = obs_dis.rsample()
+            _obs = obs_dist.sample()
 
             pre_obs.append(_obs)
 
             if self.action_minic:
-                pre_action.append(self.action_pre(h.detach()))
-                action_dis = Normal(pre_action[-1], 1)
-                pre_action_loss -= torch.sum(action_dis.log_prob(_action))
+                action_dist = self.action_pre(h.detach())
+                pre_action.append(action_dist.mode())
+                pre_action_loss -= torch.sum(action_dist.log_prob(_action))
 
             if self.predict_reward:
                 assert reward is not None
                 _reward = reward[i]
-                pre_reward.append(self.reward_pre(h))
-                reward_dis = Normal(pre_reward[-1], 1)
-                pre_reward_loss -= torch.sum(reward_dis.log_prob(_reward))
+                reward_dist = self.reward_pre(h)
+                pre_reward.append(reward_dist.mode())
+                pre_reward_loss -= torch.sum(reward_dist.log_prob(_reward))
 
             h = self.rnn_cell(torch.cat([_obs, _action], dim=1), h) # compute next state
 
@@ -108,8 +106,8 @@ class GRUBaseline(torch.nn.Module):
         h = self.rnn_cell(torch.cat([obs0, torch.zeros(obs0.shape[0], self.action_dim, dtype=obs0.dtype, device=obs0.device)], dim=1)) 
 
         for i in range(horizon):
-            _obs, _ = torch.chunk(self.obs_pre(h), 2, dim=1)
-            _action = self.action_pre(h.detach()) if action is None else action[i]
+            _obs = self.obs_pre(h).mode()
+            _action = self.action_pre(h.detach()).mode() if action is None else action[i]
             
             pre_obs.append(_obs)
 
@@ -117,7 +115,7 @@ class GRUBaseline(torch.nn.Module):
                 pre_action.append(_action)
 
             if self.predict_reward:
-                pre_reward.append(self.reward_pre(h))
+                pre_reward.append(self.reward_pre(h).mode())
 
             h = self.rnn_cell(torch.cat([_obs, _action], dim=1), h) # compute next state    
 

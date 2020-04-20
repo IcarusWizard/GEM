@@ -83,7 +83,7 @@ class PredictorTrainer(Trainer):
                 self.writer.add_video('generated_video_fake_action', torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0), global_step=step, fps=self.config['fps'])
 
                 # generate with coder prior
-                obs0 = self.coder.prior.sample((8, self.coder.latent_dim)).to(self.device) if isinstance(self.coder.prior, torch.distributions.Normal) else self.coder.prior.sample(8) 
+                obs0 = self.coder.sample_prior(8)
                 generation = self.model.generate(obs0, obs.shape[0])
                 generated_obs = generation['obs']
                 generated_video = self.coder.decode(generated_obs.view(-1, obs.shape[-1]))

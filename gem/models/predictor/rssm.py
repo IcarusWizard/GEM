@@ -1,35 +1,36 @@
 import torch
 from torch.functional import F
-from torch.distributions import Normal, kl_divergence
 
-from degmo.modules import MLP
+from gem.distributions.utils import get_kl
+
+from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class RSSM(torch.nn.Module):
-    def __init__(self, obs_dim, action_dim, stoch_dim, hidden_dim, action_mimic=True, predict_reward=True, 
-                 decoder_config={"hidden_layers" : 2, "hidden_features" : 512, "activation" : torch.nn.ELU}):
+    def __init__(self, obs_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, predict_reward=True, 
+                 decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.stoch_dim = stoch_dim
         self.hidden_dim = hidden_dim
-        self.action_minic = action_dim
+        self.action_minic = action_mimic
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
 
         self.rnn_cell = torch.nn.GRUCell(stoch_dim + action_dim, hidden_dim)
 
-        self.post = MLP(hidden_dim + obs_dim, 2 * stoch_dim, **decoder_config)
-        self.prior = MLP(hidden_dim, 2 * stoch_dim, **decoder_config)
+        self.post = MLPDecoder(hidden_dim + obs_dim, stoch_dim, **decoder_config)
+        self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
-        self.obs_pre = MLP(hidden_dim + stoch_dim, 2 * obs_dim, **decoder_config)
+        self.obs_pre = MLPDecoder(hidden_dim + stoch_dim, obs_dim, **decoder_config)
         
         if self.action_minic:
-            self.action_pre = MLP(hidden_dim + stoch_dim, action_dim, **decoder_config)
+            self.action_pre = ActionDecoder(hidden_dim + stoch_dim, action_dim, **decoder_config)
 
         if self.predict_reward:
-            self.reward_pre = MLP(hidden_dim + stoch_dim, 1, **decoder_config)
+            self.reward_pre = MLPDecoder(hidden_dim + stoch_dim, 1, dist_type='fix_std', **decoder_config)
 
     def reset(self, obs0):
         batch_size = obs0.shape[0]
@@ -62,38 +63,36 @@ class RSSM(torch.nn.Module):
         kl_loss = 0
 
         if self.action_minic:
-            pre_action.append(self.action_pre(whole_state.detach()))
-            action_dis = Normal(pre_action[-1], 1)
-            pre_action_loss -= torch.sum(action_dis.log_prob(action[0]))
+            action_dist = self.action_pre(whole_state.detach())
+            pre_action.append(action_dist.mode())
+            pre_action_loss -= torch.sum(action_dist.log_prob(action[0]))
 
         for i in range(T):
             _obs = obs[i]
             _action = action[i]
 
-            h, s, posterior_dis, prior_dis = self.obs_step(h, s, _action, _obs)
+            h, s, posterior_dist, prior_dist = self.obs_step(h, s, _action, _obs)
 
-            kl_loss += torch.sum(kl_divergence(posterior_dis, prior_dis))
+            kl_loss += torch.sum(get_kl(posterior_dist, prior_dist))
 
             whole_state = torch.cat([h, s], dim=1)
             
-            obs_mu, obs_logs = torch.chunk(self.obs_pre(whole_state), 2, dim=1)
-            obs_logs = torch.tanh(obs_logs)
-            obs_dis = Normal(obs_mu, torch.exp(obs_logs))
-            pre_obs_loss -= torch.sum(obs_dis.log_prob(_obs))
+            obs_dist = self.obs_pre(whole_state)
+            pre_obs_loss -= torch.sum(obs_dist.log_prob(_obs))
 
-            pre_obs.append(obs_mu)
+            pre_obs.append(obs_dist.mode())
 
             if self.action_minic and i < T - 1:
-                pre_action.append(self.action_pre(whole_state.detach()))
-                action_dis = Normal(pre_action[-1], 1)
-                pre_action_loss -= torch.sum(action_dis.log_prob(action[i+1]))
+                action_dist = self.action_pre(whole_state.detach())
+                pre_action.append(action_dist.mode())
+                pre_action_loss -= torch.sum(action_dist.log_prob(action[i+1]))
 
             if self.predict_reward:
                 assert reward is not None
                 _reward = reward[i]
-                pre_reward.append(self.reward_pre(whole_state))
-                reward_dis = Normal(pre_reward[-1], 1)
-                pre_reward_loss -= torch.sum(reward_dis.log_prob(_reward))
+                reward_dist = self.reward_pre(whole_state)
+                pre_reward.append(reward_dist.mode())
+                pre_reward_loss -= torch.sum(reward_dist.log_prob(_reward))
 
         pre_obs_loss /= T * B
         pre_action_loss /= T * B
@@ -133,7 +132,11 @@ class RSSM(torch.nn.Module):
         whole_state = torch.cat([h, s], dim=1)
 
         for i in range(horizon):
-            _action = self.action_pre(whole_state.detach()) if action is None else action[i]
+            if action is None:
+                action_dist = self.action_pre(whole_state.detach())
+                _action = action_dist.mode()
+            else:
+                _action = action[i]
 
             if i == 0:
                 h, s, _, _ = self.obs_step(h, s, _action, obs0)
@@ -142,14 +145,14 @@ class RSSM(torch.nn.Module):
 
             whole_state = torch.cat([h, s], dim=1)
 
-            obs_mu, obs_logs = torch.chunk(self.obs_pre(whole_state), 2, dim=1)
-            pre_obs.append(obs_mu)
+            obs_dist = self.obs_pre(whole_state)
+            pre_obs.append(obs_dist.mode())
 
             if self.action_minic:
                 pre_action.append(_action)
 
             if self.predict_reward:
-                pre_reward.append(self.reward_pre(whole_state))
+                pre_reward.append(self.reward_pre(whole_state).mode())
 
         prediction = {
             "obs" : torch.stack(pre_obs),
@@ -164,24 +167,18 @@ class RSSM(torch.nn.Module):
         return prediction
 
     def obs_step(self, prev_h, prev_s, prev_a, obs):
-        next_h, _, prior_dis = self.img_step(prev_h, prev_s, prev_a)
+        next_h, _, prior_dist = self.img_step(prev_h, prev_s, prev_a)
 
-        posterior_mu, posterior_std = torch.chunk(self.post(torch.cat([next_h, obs], dim=1)), 2, dim=1)
-        posterior_std = F.softplus(posterior_std) + 0.01
+        posterior_dist = self.post(torch.cat([next_h, obs], dim=1))
 
-        posterior_dis = Normal(posterior_mu, posterior_std)
-
-        return next_h, posterior_dis.rsample(), posterior_dis, prior_dis
+        return next_h, posterior_dist.sample(), posterior_dist, prior_dist
 
     def img_step(self, prev_h, prev_s, prev_a):
         next_h = self.rnn_cell(torch.cat([prev_s, prev_a], dim=1), prev_h) 
 
-        prior_mu, prior_std = torch.chunk(self.prior(next_h), 2, dim=1)
-        prior_std = F.softplus(prior_std) + 0.01
+        prior_dist = self.prior(next_h)
 
-        prior_dis = Normal(prior_mu, prior_std)
-
-        return next_h, prior_dis.rsample(), prior_dis
+        return next_h, prior_dist.sample(), prior_dist
 
     def get_trainer(self):
         return PredictorTrainer

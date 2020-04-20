@@ -142,11 +142,11 @@ class AffineCoupling1D(Bijector):
         return torch.cat([x2 * torch.exp(logs) + t, x1], dim=1), torch.cat([logs, torch.zeros_like(logs)], dim=1)
     
 class RealNVPBijector1D(Bijector):
-    def __init__(self, dim, num_transfrom, features=128, hidden_layers=3):
+    def __init__(self, dim, num_transformation=8, features=128, hidden_layers=3):
         super().__init__()
         self.dim = dim
 
-        self.couplings = torch.nn.ModuleList([AffineCoupling1D(dim, features, hidden_layers) for _ in range(num_transfrom)])
+        self.couplings = torch.nn.ModuleList([AffineCoupling1D(dim, features, hidden_layers) for _ in range(num_transformation)])
 
     def _forward(self, z):
         x = z
