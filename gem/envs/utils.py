@@ -1,4 +1,5 @@
 import os, time
+import torch
 
 from .wrapper import *
 
@@ -33,6 +34,18 @@ def make_env(config):
         env = Collect(env, callbacks)
         env = RewardObs(env)
     return env
+
+def make_imagine_env(predictor_checkpoint_file):
+    from .imagine import Imagine
+    from gem.models.sensor.run_utils import get_sensor_by_checkpoint
+    from gem.models.predictor.run_utils import get_predictor_by_checkpoint
+    predictor_checkpoint = torch.load(os.path.join('checkpoint', 'predictor', predictor_checkpoint_file + '.pt'), map_location='cpu')
+    predictor = get_predictor_by_checkpoint(predictor_checkpoint)
+    predictor.requires_grad_(False)
+    sensor_checkpoint = torch.load(os.path.join('checkpoint', 'sensor', predictor_checkpoint['config']['checkpoint'] + '.pt'), map_location='cpu')
+    sensor = get_sensor_by_checkpoint(sensor_checkpoint)
+    sensor.requires_grad_(False)
+    return Imagine(sensor, predictor)
 
 def save_episodes(datadir, ep):
     traj_id = len(os.listdir(datadir))

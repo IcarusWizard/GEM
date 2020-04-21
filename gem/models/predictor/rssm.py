@@ -19,20 +19,22 @@ class RSSM(torch.nn.Module):
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
 
+        self.state_dim = hidden_dim + stoch_dim
+
         self.rnn_cell = torch.nn.GRUCell(stoch_dim + action_dim, hidden_dim)
 
         self.post = MLPDecoder(hidden_dim + obs_dim, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
-        self.obs_pre = MLPDecoder(hidden_dim + stoch_dim, obs_dim, dist_type='fix_std', **decoder_config)
+        self.obs_pre = MLPDecoder(self.state_dim, obs_dim, dist_type='fix_std', **decoder_config)
         
         if self.action_minic:
-            self.action_pre = ActionDecoder(hidden_dim + stoch_dim, action_dim, **decoder_config)
+            self.action_pre = ActionDecoder(self.state_dim, action_dim, **decoder_config)
 
         if self.predict_reward:
-            self.reward_pre = MLPDecoder(hidden_dim + stoch_dim, 1, dist_type='fix_std', **decoder_config)
+            self.reward_pre = MLPDecoder(self.state_dim, 1, dist_type='fix_std', **decoder_config)
 
-    def reset(self, obs0):
+    def _reset(self, obs0):
         batch_size = obs0.shape[0]
         dtype = obs0.dtype
         device = obs0.device
@@ -48,7 +50,7 @@ class RSSM(torch.nn.Module):
         
         T, B = obs.shape[:2]
 
-        h, s = self.reset(obs[0])
+        h, s = self._reset(obs[0])
         whole_state = torch.cat([h, s], dim=1)
 
         pre_obs = []
@@ -128,7 +130,7 @@ class RSSM(torch.nn.Module):
         pre_action = []
         pre_reward = []    
 
-        h, s = self.reset(obs0)
+        h, s = self._reset(obs0)
         whole_state = torch.cat([h, s], dim=1)
 
         for i in range(horizon):
@@ -182,3 +184,16 @@ class RSSM(torch.nn.Module):
 
     def get_trainer(self):
         return PredictorTrainer
+
+    # API for environmental rollout
+    def reset(self, obs):
+        h, s = self._reset(obs)
+        h, s, _, _ = self.obs_step(h, s, torch.zeros(obs.shape[0], self.action_dim, dtype=obs.dtype, device=obs.device), obs)
+        return torch.cat([h, s], dim=1)
+
+    def step(self, pre_state, action):
+        h, s = torch.split(pre_state, [self.hidden_dim, self.stoch_dim], dim=1)
+        h, s, _ = self.img_step(h, s, action)
+        next_state = torch.cat([h, s], dim=1)
+        reward = self.reward_pre(next_state).mode()
+        return next_state, reward

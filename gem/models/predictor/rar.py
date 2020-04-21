@@ -16,6 +16,8 @@ class RAR(torch.nn.Module):
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
 
+        self.state_dim = hidden_dim
+
         self.rnn_cell = torch.nn.GRUCell(obs_dim + action_dim, hidden_dim)
 
         self.obs_pre = MLPDecoder(hidden_dim, obs_dim, dist_type='fix_std', **decoder_config)
@@ -133,3 +135,14 @@ class RAR(torch.nn.Module):
 
     def get_trainer(self):
         return PredictorTrainer
+
+    # API for environmental rollout
+    def reset(self, obs):
+        state = self.rnn_cell(torch.cat([obs, torch.zeros(obs.shape[0], self.action_dim, dtype=obs.dtype, device=obs.device)], dim=1))
+        return state 
+
+    def step(self, pre_state, action):
+        obs = self.obs_pre(pre_state).mode()
+        next_state = self.rnn_cell(torch.cat([obs, action], dim=1), pre_state)
+        reward = self.reward_pre(next_state).mode()
+        return next_state, reward
