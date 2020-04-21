@@ -9,7 +9,7 @@ from gem.distributions import Normal, Bernoulli, TanhBijector, BijectoredDistrib
 
 class MLPDecoder(torch.nn.Module):
     def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu',
-                 dist_type='gauss', min_std=0.01):
+                 dist_type='gauss', min_std=0.1):
         super().__init__()
         self.dist_type = dist_type
         self.min_std = min_std
@@ -110,9 +110,10 @@ class FullConvDecoder(torch.nn.Module):
 
 
 class ActionDecoder(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu', min_std=0.01):
+    def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu', init_std=1, min_std=0.01):
         super().__init__()
         self.min_std = min_std
+        self.init_bais = np.log(np.exp(init_std) - 1)
 
         self.decoder = MLP(input_dim, 2 * output_dim, features, hidden_layers, activation=activation)
         self.bijector = TanhBijector()
@@ -120,7 +121,7 @@ class ActionDecoder(torch.nn.Module):
     def forward(self, x):
         mu, std = torch.chunk(self.decoder(x), 2, dim=1)
         mu = 5 * torch.tanh(mu / 5) # rescale 
-        std = F.softplus(std) + self.min_std
+        std = F.softplus(std + self.init_bais) + self.min_std
         dist = Normal(mu, std)
         dist = BijectoredDistribution(dist, self.bijector)
         return dist
