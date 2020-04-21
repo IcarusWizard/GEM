@@ -18,7 +18,7 @@ class RAR(torch.nn.Module):
 
         self.rnn_cell = torch.nn.GRUCell(obs_dim + action_dim, hidden_dim)
 
-        self.obs_pre = MLPDecoder(hidden_dim, obs_dim, **decoder_config)
+        self.obs_pre = MLPDecoder(hidden_dim, obs_dim, dist_type='fix_std', **decoder_config)
         
         if self.action_minic:
             self.action_pre = ActionDecoder(hidden_dim, action_dim, **decoder_config)
@@ -52,7 +52,7 @@ class RAR(torch.nn.Module):
             obs_dist = self.obs_pre(h)
             pre_obs_loss -= torch.sum(obs_dist.log_prob(_obs))
 
-            _obs = obs_dist.sample()
+            _obs = obs_dist.mode()
 
             pre_obs.append(_obs)
 

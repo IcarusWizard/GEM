@@ -24,7 +24,7 @@ class RSSM(torch.nn.Module):
         self.post = MLPDecoder(hidden_dim + obs_dim, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
-        self.obs_pre = MLPDecoder(hidden_dim + stoch_dim, obs_dim, **decoder_config)
+        self.obs_pre = MLPDecoder(hidden_dim + stoch_dim, obs_dim, dist_type='fix_std', **decoder_config)
         
         if self.action_minic:
             self.action_pre = ActionDecoder(hidden_dim + stoch_dim, action_dim, **decoder_config)
