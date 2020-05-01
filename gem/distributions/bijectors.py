@@ -87,6 +87,7 @@ class TanhBijector(Bijector):
         return x, logdet
 
     def _backward(self, x):
+        x = torch.clamp(x, -0.99999997, 0.99999997)
         z = atanh(x)
         logdet = torch.log(1 - x ** 2 + EPS)
         return z, -logdet
