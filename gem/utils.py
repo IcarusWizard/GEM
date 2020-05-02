@@ -6,6 +6,11 @@ import torch
 
 LOG2PI = 0.5 * np.log(2 * np.pi)
 
+class AttrDict(dict):
+
+  __setattr__ = dict.__setitem__
+  __getattr__ = dict.__getitem__
+
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
