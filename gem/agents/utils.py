@@ -40,7 +40,7 @@ def real_env_rollout(real_env, world_model, agent):
     with torch.no_grad():
         obs = real_env.reset()
         obs = obs['image']
-        obs = torch.as_tensor(obs, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0)
+        obs = torch.as_tensor(obs / 255.0, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0)
         state = world_model.reset(obs)
 
         while True:
@@ -52,7 +52,7 @@ def real_env_rollout(real_env, world_model, agent):
             _action = action[0].cpu().numpy()
             next_obs, reward, done, info = real_env.step(_action)
             next_obs = next_obs['image']
-            next_obs = torch.as_tensor(next_obs, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0)
+            next_obs = torch.as_tensor(next_obs / 255.0, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0)
 
             # step world model
             next_state, predict_reward, _, _ = world_model.step(action, next_obs)
@@ -66,11 +66,14 @@ def real_env_rollout(real_env, world_model, agent):
             rollout_value.append(value)
             rollout_value_dist.append(value_dist)
 
+            state = next_state
+            obs = next_obs
+
             if done:
                 break
         
-            return rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
-                rollout_predicted_reward, rollout_value, rollout_value_dist
+        return rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
+            rollout_predicted_reward, rollout_value, rollout_value_dist
 
 def compute_lambda_return(rewards, values, bootstrap=None, _gamma=0.99, _lambda=0.98):
     next_values = values[1:]
