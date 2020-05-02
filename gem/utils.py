@@ -68,3 +68,8 @@ def save_gif(filename, video, fps=10):
     import moviepy.editor as mpy
     clip = mpy.ImageSequenceClip([video[i]for i in range(video.shape[0])], fps=fps)
     clip.write_gif(filename, verbose=False, logger=None)
+
+def random_move(input_folder, target_folder):
+    """randomly move a file from input folder to target folder"""
+    filename = random.choice(os.listdir(input_folder))
+    os.system(f'mv {os.path.join(input_folder, filename)} {os.path.join(target_folder, filename)}')
