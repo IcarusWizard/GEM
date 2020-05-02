@@ -138,11 +138,16 @@ class RAR(torch.nn.Module):
 
     # API for environmental rollout
     def reset(self, obs):
+        self.last_obs = obs
         state = self.rnn_cell(torch.cat([obs, torch.zeros(obs.shape[0], self.action_dim, dtype=obs.dtype, device=obs.device)], dim=1))
         return state 
 
-    def step(self, pre_state, action):
-        obs = self.obs_pre(pre_state).mode()
-        next_state = self.rnn_cell(torch.cat([obs, action], dim=1), pre_state)
+    def step(self, pre_state, action, obs=None):
+        if self.last_obs is None:
+            last_obs = self.obs_pre(pre_state).mode()
+        else:
+            last_obs = self.last_obs
+        next_state = self.rnn_cell(torch.cat([last_obs, action], dim=1), pre_state)
+        self.last_obs = obs
         reward = self.reward_pre(next_state).mode()
         return next_state, reward

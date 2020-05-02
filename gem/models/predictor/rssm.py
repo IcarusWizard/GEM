@@ -191,9 +191,12 @@ class RSSM(torch.nn.Module):
         h, s, _, _ = self.obs_step(h, s, torch.zeros(obs.shape[0], self.action_dim, dtype=obs.dtype, device=obs.device), obs)
         return torch.cat([h, s], dim=1)
 
-    def step(self, pre_state, action):
+    def step(self, pre_state, action, obs=None):
         h, s = torch.split(pre_state, [self.hidden_dim, self.stoch_dim], dim=1)
-        h, s, _ = self.img_step(h, s, action)
+        if obs is None:
+            h, s, _ = self.img_step(h, s, action)
+        else:
+            h, s, _, _ = self.obs_step(h, s, action, obs)
         next_state = torch.cat([h, s], dim=1)
         reward = self.reward_pre(next_state).mode()
         return next_state, reward

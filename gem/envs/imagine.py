@@ -18,8 +18,12 @@ class Imagine:
     def action_space(self):
         return gym.spaces.Box(-1, 1, [self.action_dim], dtype=np.float32)
 
-    def step(self, action):
-        self.state, reward = self.predictor.step(self.state, action)
+    def step(self, action, obs=None):
+        if obs is not None:
+            emb = self.sensor.encode(obs)
+        else:
+            emb = None
+        self.state, reward = self.predictor.step(self.state, action, emb)
 
         info = None
         done = False
