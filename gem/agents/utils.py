@@ -90,4 +90,4 @@ def compute_lambda_return(rewards, values, bootstrap=None, _gamma=0.99, _lambda=
         last = g[i] + _gamma * _lambda * last
         lambda_returns.append(last)
 
-    return lambda_returns
+    return list(reversed(lambda_returns))

@@ -174,7 +174,6 @@ class ACAgentTrainer:
         return rollout_obs, rollout_predicted_obs, info
 
     def save(self, filename):
-        test_loss, _ = self.test_whole(self.test_loader)
         torch.save({
             "model_state_dict" : self.agent.state_dict(),
             "optimizer_state_dict" : self.optim.state_dict(),
