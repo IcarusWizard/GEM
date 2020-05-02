@@ -5,7 +5,7 @@ import numpy as np
 from .base import MLP, Flatten, Unflatten, ResNet, ResBlock
 from functools import partial
 
-from gem.distributions import Normal, Bernoulli, TanhBijector, BijectoredDistribution
+from gem.distributions import Normal, Bernoulli, Onehot, TanhBijector, BijectoredDistribution
 
 class MLPDecoder(torch.nn.Module):
     def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu',
@@ -110,18 +110,27 @@ class FullConvDecoder(torch.nn.Module):
 
 
 class ActionDecoder(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu', init_std=1, min_std=0.01):
+    def __init__(self, input_dim, output_dim, features, hidden_layers, activation='elu', mode='continuous', init_std=1, min_std=0.01):
         super().__init__()
-        self.min_std = min_std
-        self.init_bais = np.log(np.exp(init_std) - 1)
+        self.mode = mode
 
-        self.decoder = MLP(input_dim, 2 * output_dim, features, hidden_layers, activation=activation)
-        self.bijector = TanhBijector()
+        if self.mode == 'continuous':
+            self.min_std = min_std
+            self.init_bais = np.log(np.exp(init_std) - 1)
+
+            self.decoder = MLP(input_dim, 2 * output_dim, features, hidden_layers, activation=activation)
+            self.bijector = TanhBijector()
+        elif self.mode == 'discrete':
+            self.decoder = MLP(input_dim, output_dim, features, hidden_layers, activation=activation)
     
     def forward(self, x):
-        mu, std = torch.chunk(self.decoder(x), 2, dim=1)
-        mu = 5 * torch.tanh(mu / 5) # rescale 
-        std = F.softplus(std + self.init_bais) + self.min_std
-        dist = Normal(mu, std)
-        dist = BijectoredDistribution(dist, self.bijector)
+        if self.mode == 'continuous':
+            mu, std = torch.chunk(self.decoder(x), 2, dim=1)
+            mu = 5 * torch.tanh(mu / 5) # rescale 
+            std = F.softplus(std + self.init_bais) + self.min_std
+            dist = Normal(mu, std)
+            dist = BijectoredDistribution(dist, self.bijector)
+        elif self.mode == 'discrete':
+            logits = self.decoder(x)
+            dist = Onehot(logits)
         return dist
