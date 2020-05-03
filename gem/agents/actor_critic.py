@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
+from itertools import chain
 from torch.utils.tensorboard import SummaryWriter
 
 from gem.utils import nats2bits, select_gpus, step_loader
@@ -20,6 +21,12 @@ class ACAgent(torch.nn.Module):
     def forward(self, state):
         return self.actor(state), self.critic(state)
 
+    def get_actor_parameters(self):
+        return self.actor.parameters()
+
+    def get_critic_parameters(self):
+        return self.critic.parameters()
+
     def get_trainer(self):
         return ACAgentTrainer
 
@@ -34,6 +41,12 @@ class ACShareAgent(torch.nn.Module):
     def forward(self, state):
         features = self.feature_net(state)
         return self.actor_head(features), self.critic_head(features)
+
+    def get_actor_parameters(self):
+        return chain(self.feature_net.parameters(), self.actor_head.parameters())
+
+    def get_critic_parameters(self):
+        return chain(self.feature_net.parameters(), self.critic_head.parameters())
 
     def get_trainer(self):
         return ACAgentTrainer
@@ -62,7 +75,10 @@ class ACAgentTrainer:
         self.observation_iter = step_loader(self.observation_loader) # used in training
 
         # config optimizer
-        self.optim = torch.optim.Adam(self.agent.parameters(), lr=self.config['lr'], 
+        self.actor_optim = torch.optim.Adam(self.agent.get_actor_parameters(), lr=self.config['lr'], 
+                                      betas=(self.config['beta1'], self.config['beta2']))
+
+        self.critic_optim = torch.optim.Adam(self.agent.get_critic_parameters(), lr=self.config['lr'], 
                                       betas=(self.config['beta1'], self.config['beta2']))
     
     def train(self):
@@ -96,8 +112,6 @@ class ACAgentTrainer:
         values_dist = stack_normal(rollout_value_dist[:-1])
         critic_loss = - torch.mean(values_dist.log_prob(lambda_returns.detach()))
 
-        loss = actor_loss + critic_loss
-
         info = {
             "actor_loss" : actor_loss.item(),
             "critic_loss" : critic_loss.item(),
@@ -106,9 +120,13 @@ class ACAgentTrainer:
             "accumulate_reward_train" : torch.sum(torch.stack(rollout_reward).detach()).item() / obs.shape[0],
         }
 
-        self.optim.zero_grad()
-        loss.backward()
-        self.optim.step()
+        self.actor_optim.zero_grad()
+        actor_loss.backward()
+        self.actor_optim.step()
+
+        self.critic_optim.zero_grad()
+        critic_loss.backward()
+        self.critic_optim.step()
 
         self.last_train_info = info
 
@@ -176,7 +194,8 @@ class ACAgentTrainer:
     def save(self, filename):
         torch.save({
             "model_state_dict" : self.agent.state_dict(),
-            "optimizer_state_dict" : self.optim.state_dict(),
+            "actor_optimizer_state_dict" : self.actor_optim.state_dict(),
+            "critic_optimizer_state_dict" : self.critic_optim.state_dict(),
             "config" : self.config,
             "model_parameters" : self.config['model_param'],
             "seed" : self.config['seed'],
@@ -186,4 +205,5 @@ class ACAgentTrainer:
         checkpoint = torch.load(filename, map_location='cpu')
         self.agent.load_state_dict(checkpoint['model_state_dict'])
         self.agent = self.agent.to(self.device) # make sure model on right device
-        self.optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.actor_optim.load_state_dict(checkpoint['actor_optimizer_state_dict'])
+        self.critic_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])

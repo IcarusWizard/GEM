@@ -6,7 +6,6 @@ from tqdm import tqdm
 import os, argparse
 
 from gem.utils import create_dir
-from gem.models.sensor.run_utils import get_sensor_by_checkpoint
 from gem.agents.run_utils import config_agent
 from gem.utils import setup_seed
 

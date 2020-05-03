@@ -12,7 +12,7 @@ def get_default_agent_config():
 
     config.gamma = 0.99
     config['lambda'] = 0.95
-    config.horizon = 50
+    config.horizon = 15
 
     config.env = 'dmc_finger_spin'
     config.action_repeat = 2
@@ -24,12 +24,12 @@ def get_default_agent_config():
     config.preload = True
     config.gpu = '0'
     config.workers = 9999
-    config.steps = 10000
+    config.steps = 100000
     config.lr = 1e-3
     config.beta1 = 0.9
     config.beta2 = 0.999
 
-    config.log_step = 500
+    config.log_step = 1000
     config.fps = 15
     config.suffix = ''
 
