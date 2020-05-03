@@ -29,16 +29,7 @@ def load_sensor_dataset(config, batch_size=None):
     val_loader = torch.utils.data.DataLoader(valset, batch_size=batch_size, num_workers=workers, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size, num_workers=workers, pin_memory=True)
 
-    filenames = {
-        "log_name" : "{}_{}".format(config['model'], config['dataset']),
-        "model_name" : "{}_{}".format(config['model'], config['dataset']),
-    }
-
-    if config['suffix']:
-        for key in filenames.keys():
-            filenames[key] += '_{}'.format(config['suffix'])
-
-    return filenames, model_param, train_loader, val_loader, test_loader
+    return model_param, train_loader, val_loader, test_loader
 
 def load_env_dataset(name, preload, image_per_file):
     datadir = os.path.join(DATAROOT, name)
@@ -94,16 +85,7 @@ def load_predictor_dataset(config, batch_size=None):
     val_loader = torch.utils.data.DataLoader(valset, batch_size=min(batch_size, len(valset)), num_workers=workers, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(testset, batch_size=min(batch_size, len(testset)), num_workers=workers, pin_memory=True)
 
-    filenames = {
-        "log_name" : "{}_{}".format(config['model'], config['checkpoint']),
-        "model_name" : "{}_{}".format(config['model'], config['checkpoint']),
-    }
-
-    if config['suffix']:
-        for key in filenames.keys():
-            filenames[key] += '_{}'.format(config['suffix'])
-
-    return filenames, model_param, train_loader, val_loader, test_loader
+    return model_param, train_loader, val_loader, test_loader
 
 def load_env_dataset_seq(name, horizon, fix_start, preload):
     datadir = os.path.join(DATAROOT, name)

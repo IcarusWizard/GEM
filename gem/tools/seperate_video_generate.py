@@ -37,7 +37,7 @@ if __name__ == '__main__':
         "checkpoint" : None,
     }
 
-    _, _, _, _, test_loader = load_predictor_dataset(config, batch_size=8)
+    _, _, _, test_loader = load_predictor_dataset(config, batch_size=8)
     testset = test_loader.dataset
     test_loader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=True)
     batch = next(iter(test_loader))

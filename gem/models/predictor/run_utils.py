@@ -22,7 +22,11 @@ def config_predictor(config):
     model_class = getattr(module, config['model'])
     model = model_class(**model_param)
 
-    return model, model_param
+    filename = config['model'] + '_' + config['checkpoint']
+    if len(config['suffix']) > 0:
+        filename = filename + '_' + len(config['suffix'])
+
+    return model, model_param, filename
 
 def get_predictor_by_checkpoint(checkpoint):
     state_dict = checkpoint['model_state_dict']

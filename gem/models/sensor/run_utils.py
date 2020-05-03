@@ -46,7 +46,12 @@ def config_sensor(config, model_param):
     model_class = getattr(module, config['model'])
     model = model_class(**model_param)
 
-    return model, model_param
+    filename = "{}_{}".format(config['model'], config['dataset'])
+
+    if len(config['suffix']) > 0:
+        filename = filename + '_' + config['suffix']
+
+    return model, model_param, filename
 
 def get_sensor_by_checkpoint(checkpoint):
     state_dict = checkpoint['model_state_dict']

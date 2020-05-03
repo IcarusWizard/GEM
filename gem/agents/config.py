@@ -1,4 +1,8 @@
+import os
 from gem.utils import AttrDict
+
+AgentLogDir = os.path.join('logs', 'agent')
+AgentDir = os.path.join('checkpoint', 'agent')
 
 def get_default_agent_config():
     config = AttrDict()

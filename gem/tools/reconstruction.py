@@ -34,7 +34,7 @@ if __name__ == '__main__':
         "suffix" : None
     }
 
-    _, _, _, _, test_loader = load_sensor_dataset(config, batch_size=8)
+    _, _, _, test_loader = load_sensor_dataset(config, batch_size=8)
     testset = test_loader.dataset
     test_loader = torch.utils.data.DataLoader(testset, batch_size=8, shuffle=True)
     inputs = next(iter(test_loader))[0]

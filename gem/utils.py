@@ -3,6 +3,7 @@ import os
 import random
 import numpy as np
 import torch
+import argparse
 
 LOG2PI = 0.5 * np.log(2 * np.pi)
 
@@ -73,3 +74,15 @@ def random_move(input_folder, target_folder):
     """randomly move a file from input folder to target folder"""
     filename = random.choice(os.listdir(input_folder))
     os.system(f'mv {os.path.join(input_folder, filename)} {os.path.join(target_folder, filename)}')
+
+def get_config_type(v):
+    if isinstance(v, list):
+        return lambda x : list(map(int, x.split(',')))
+    return type(v)
+
+def parse_args(config={}):
+    parser = argparse.ArgumentParser()
+    for k, v in config.items():
+        parser.add_argument(f'--{k}', type=get_config_type(v), default=v, help=f'default : {v}')
+    args = parser.parse_args()
+    return args
