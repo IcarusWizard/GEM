@@ -121,7 +121,7 @@ class ACAgentTrainer:
         }
 
         self.actor_optim.zero_grad()
-        actor_loss.backward()
+        actor_loss.backward(retain_graph=True)
         self.actor_optim.step()
 
         self.critic_optim.zero_grad()
