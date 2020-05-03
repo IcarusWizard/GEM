@@ -122,11 +122,18 @@ class ACAgentTrainer:
 
         self.actor_optim.zero_grad()
         actor_loss.backward(retain_graph=True)
+        actor_grad_norm = torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.config['grad_clip'])
         self.actor_optim.step()
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
+        critic_grad_norm = torch.nn.utils.clip_grad_norm_(self.agent.get_critic_parameters(), self.config['grad_clip'])
         self.critic_optim.step()
+
+        info.update({
+            'actor_grad_norm' : actor_grad_norm,
+            "critic_grad_norm" : critic_grad_norm,
+        })
 
         self.last_train_info = info
 

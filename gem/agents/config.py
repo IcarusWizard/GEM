@@ -25,9 +25,10 @@ def get_default_agent_config():
     config.gpu = '0'
     config.workers = 9999
     config.steps = 100000
-    config.lr = 1e-3
+    config.lr = 8e-5
     config.beta1 = 0.9
     config.beta2 = 0.999
+    config.grad_clip = 100.0
 
     config.log_step = 1000
     config.fps = 15
