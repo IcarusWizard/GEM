@@ -75,6 +75,17 @@ def random_move(input_folder, target_folder):
     filename = random.choice(os.listdir(input_folder))
     os.system(f'mv {os.path.join(input_folder, filename)} {os.path.join(target_folder, filename)}')
 
+def expert_build(max_index):
+    """rename expert traj in current path and only maintain max_index number of traj"""
+    file_list = sorted(os.listdir('.'))
+    file_list.reverse()
+    for i, filename in enumerate(file_list):
+        if i < max_index:
+            target_file = 'expert_traj_{}_501.npz'.format(i)
+            os.system(f'mv {filename} {target_file}')
+        else:
+            os.system(f'rm {filename}')
+
 def get_config_type(v):
     if isinstance(v, list):
         return lambda x : list(map(int, x.split(',')))
