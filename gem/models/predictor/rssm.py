@@ -1,13 +1,13 @@
 import torch
 from torch.functional import F
 
-from gem.distributions.utils import get_kl
+from gem.distributions.utils import get_kl, stack_normal
 
 from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class RSSM(torch.nn.Module):
-    def __init__(self, obs_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, predict_reward=True, 
+    def __init__(self, obs_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, actor_mode='continuous', predict_reward=True, 
                  decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
@@ -29,7 +29,7 @@ class RSSM(torch.nn.Module):
         self.obs_pre = MLPDecoder(self.state_dim, obs_dim, dist_type='fix_std', **decoder_config)
         
         if self.action_minic:
-            self.action_pre = ActionDecoder(self.state_dim, action_dim, **decoder_config)
+            self.action_pre = ActionDecoder(self.state_dim, action_dim, mode=actor_mode, **decoder_config)
 
         if self.predict_reward:
             self.reward_pre = MLPDecoder(self.state_dim, 1, dist_type='fix_std', **decoder_config)
@@ -51,23 +51,11 @@ class RSSM(torch.nn.Module):
         T, B = obs.shape[:2]
 
         h, s = self._reset(obs[0])
-        whole_state = torch.cat([h, s], dim=1)
+        state = torch.cat([h, s], dim=1)
 
-        pre_obs = []
-        pre_obs_loss = 0
-
-        pre_action = []
-        pre_action_loss = 0
-
-        pre_reward = []
-        pre_reward_loss = 0
-
-        kl_loss = 0
-
-        if self.action_minic:
-            action_dist = self.action_pre(whole_state.detach())
-            pre_action.append(action_dist.mode())
-            pre_action_loss -= torch.sum(action_dist.log_prob(action[0]))
+        states = []
+        posterior_dists = []
+        prior_dists = []
 
         for i in range(T):
             _obs = obs[i]
@@ -75,51 +63,43 @@ class RSSM(torch.nn.Module):
 
             h, s, posterior_dist, prior_dist = self.obs_step(h, s, _action, _obs)
 
-            kl_loss += torch.sum(get_kl(posterior_dist, prior_dist))
+            posterior_dists.append(posterior_dist)
+            prior_dists.append(prior_dist)
 
-            whole_state = torch.cat([h, s], dim=1)
-            
-            obs_dist = self.obs_pre(whole_state)
-            pre_obs_loss -= torch.sum(obs_dist.log_prob(_obs))
+            state = torch.cat([h, s], dim=1)
+            states.append(state)
 
-            pre_obs.append(obs_dist.mode())
+        info = {}
+        prediction = {}
+        loss = 0
 
-            if self.action_minic and i < T - 1:
-                action_dist = self.action_pre(whole_state.detach())
-                pre_action.append(action_dist.mode())
-                pre_action_loss -= torch.sum(action_dist.log_prob(action[i+1]))
+        kl_loss = get_kl(stack_normal(posterior_dists), stack_normal(prior_dists))
+        kl_loss = torch.sum(kl_loss) / (T * B)
+        info['kl_loss'] = kl_loss.item()
+        loss += kl_loss
 
-            if self.predict_reward:
-                assert reward is not None
-                _reward = reward[i]
-                reward_dist = self.reward_pre(whole_state)
-                pre_reward.append(reward_dist.mode())
-                pre_reward_loss -= torch.sum(reward_dist.log_prob(_reward))
-
-        pre_obs_loss /= T * B
-        pre_action_loss /= T * B
-        pre_reward_loss /= T * B
-        kl_loss /= T * B
-
-        loss = pre_obs_loss + pre_action_loss + pre_reward_loss + kl_loss
-
-        prediction = {
-            "obs" : torch.stack(pre_obs),
-        }
-
-        info = {
-            "loss" : loss.item(),
-            "obs_loss" : pre_obs_loss.item(),
-            "kl_loss" : kl_loss.item(),
-        }      
+        states = torch.cat(states, dim=0).contiguous()
+        obs_dist = self.obs_pre(states)
+        obs_loss = - torch.sum(obs_dist.log_prob(obs.view(T * B, *obs.shape[2:]))) / (T * B)
+        info['obs_loss'] = obs_loss.item()
+        prediction['obs'] = obs_dist.mode().view(T, B, *obs.shape[2:])
+        loss += obs_loss
 
         if self.action_minic:
-            prediction['action'] = torch.stack(pre_action)
-            info['action_loss'] = pre_action_loss.item()
+            action_dist = self.action_pre(states[:-B])
+            action_loss = - torch.sum(action_dist.log_prob(action[1:].view((T - 1) * B, *action.shape[2:]))) / ((T - 1) * B)
+            info['action_loss'] = action_loss.item()
+            prediction['action'] = action_dist.mode().view(T - 1, B, *action.shape[2:])
+            loss += action_loss
         
         if self.predict_reward:
-            prediction['reward'] = torch.stack(pre_reward)
-            info['reward_loss'] = pre_reward_loss.item()
+            reward_dist = self.reward_pre(states)
+            reward_loss = - torch.sum(reward_dist.log_prob(reward.view(T * B, 1))) / (T * B)
+            info['reward_loss'] = reward_loss.item()
+            prediction['reward'] = reward_dist.mode().view(T, B, 1)
+            loss += reward_loss
+
+        info['loss'] = loss.item()
 
         return loss, prediction, info
 
@@ -131,11 +111,11 @@ class RSSM(torch.nn.Module):
         pre_reward = []    
 
         h, s = self._reset(obs0)
-        whole_state = torch.cat([h, s], dim=1)
+        state = torch.cat([h, s], dim=1)
 
         for i in range(horizon):
             if action is None:
-                action_dist = self.action_pre(whole_state.detach())
+                action_dist = self.action_pre(state.detach())
                 _action = action_dist.mode()
             else:
                 _action = action[i]
@@ -145,16 +125,16 @@ class RSSM(torch.nn.Module):
             else:
                 h, s, _ = self.img_step(h, s, _action)
 
-            whole_state = torch.cat([h, s], dim=1)
+            state = torch.cat([h, s], dim=1)
 
-            obs_dist = self.obs_pre(whole_state)
+            obs_dist = self.obs_pre(state)
             pre_obs.append(obs_dist.mode())
 
             if self.action_minic:
                 pre_action.append(_action)
 
             if self.predict_reward:
-                pre_reward.append(self.reward_pre(whole_state).mode())
+                pre_reward.append(self.reward_pre(state).mode())
 
         prediction = {
             "obs" : torch.stack(pre_obs),

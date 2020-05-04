@@ -7,6 +7,7 @@ def config_predictor(config):
         "action_dim" : config['action_dim'],
         "hidden_dim" : config['hidden_dim'],
         "action_mimic" : config['action_mimic'],
+        "actor_mode" : config['actor_mode'],
         "predict_reward" : config['predict_reward'],
         "decoder_config" : {
             "hidden_layers" : config['decoder_hidden_layers'],

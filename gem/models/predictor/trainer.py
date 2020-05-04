@@ -98,11 +98,11 @@ class PredictorTrainer(Trainer):
             B, T = images.shape[:2]
             images = images.view(B * T, *images.shape[2:])
             obs = self.coder.encode(images)
-            obs = obs.view(B, T, obs.shape[1]).permute(1, 0, 2)
+            obs = obs.view(B, T, obs.shape[1]).permute(1, 0, 2).contiguous()
         else:
-            obs = batch['emb'].permute(1, 0, 2).to(self.device)
-        action = batch['action'].permute(1, 0, 2).to(self.device)
-        reward = batch['reward'].permute(1, 0).unsqueeze(dim=-1).to(self.device) if self.config['predict_reward'] else None  
+            obs = batch['emb'].permute(1, 0, 2).to(self.device).contiguous()
+        action = batch['action'].permute(1, 0, 2).to(self.device).contiguous()
+        reward = batch['reward'].permute(1, 0).unsqueeze(dim=-1).to(self.device).contiguous() if self.config['predict_reward'] else None  
         return obs, action, reward    
 
     def test_whole(self, loader):
