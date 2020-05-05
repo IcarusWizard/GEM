@@ -16,7 +16,7 @@ def config_agent(config):
 
     filename = config['model'] + '_' + config['checkpoint']
     if len(config['suffix']) > 0:
-        filename = filename + '_' + len(config['suffix'])
+        filename = filename + '_' + config['suffix']
 
     return model, model_param, filename
 
