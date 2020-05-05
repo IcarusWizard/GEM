@@ -21,6 +21,12 @@ class ACAgent(torch.nn.Module):
     def forward(self, state):
         return self.actor(state), self.critic(state)
 
+    def get_action_dist(self, state):
+        return self.actor(state)
+
+    def get_critic_dist(self, state):
+        return self.critic(state)
+
     def get_actor_parameters(self):
         return self.actor.parameters()
 
@@ -41,6 +47,12 @@ class ACShareAgent(torch.nn.Module):
     def forward(self, state):
         features = self.feature_net(state)
         return self.actor_head(features), self.critic_head(features)
+
+    def get_action_dist(self, state):
+        return self.actor_head(self.feature_net(state))
+
+    def get_critic_dist(self, state):
+        return self.critic_head(self.feature_net(state))
 
     def get_actor_parameters(self):
         return chain(self.feature_net.parameters(), self.actor_head.parameters())
