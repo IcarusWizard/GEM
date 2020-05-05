@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import torch
 
 class Imagine:
 
@@ -7,7 +8,7 @@ class Imagine:
         super().__init__()
         self.sensor = sensor
         self.predictor = predictor
-        self.state_dim = predictor.state_dim
+        self.state_dim = sensor.latent_dim + predictor.state_dim
         self.action_dim = predictor.action_dim
 
         self.dtype = next(self.sensor.parameters()).dtype
@@ -31,19 +32,22 @@ class Imagine:
         info = None
         done = False
 
-        return self.state, reward, done, info
+        if emb is None:
+            emb = self.predictor.obs_pre(self.state).mode()
+
+        return torch.cat([emb, self.state], dim=1), reward, done, info
 
     def reset(self, obs):
         emb = self.sensor.encode(obs)
         self.state = self.predictor.reset(emb)
-        return self.state
+        return torch.cat([emb, self.state], dim=1)
 
     def render(self, state):
         with_time = len(state.shape) == 3
         if with_time:
             T, B, S = state.shape
             state = state.view(-1, S)
-        emb = self.predictor.obs_pre(state).mode()
+        emb, state = torch.split(state, (self.sensor.latent_dim, self.predictor.state_dim), dim=1)
         obs = self.sensor.decode(emb)
         if with_time:
             obs = obs.view(T, B, *obs.shape[1:])
