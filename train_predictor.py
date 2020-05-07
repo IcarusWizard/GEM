@@ -7,7 +7,7 @@ from tqdm import tqdm
 from gem.models.sensor.run_utils import get_sensor_by_checkpoint
 from gem.models.sensor.config import SensorDir
 from gem.models.predictor.run_utils import config_predictor
-from gem.models.predictor.config import get_default_predictor_config, PredictorLogDir, PredictortDir
+from gem.models.predictor.config import get_default_predictor_config, PredictorLogDir, PredictorDir
 from gem.utils import setup_seed, create_dir, parse_args
 
 from gem.data import load_predictor_dataset
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     config = args.__dict__
 
-    create_dir(PredictortDir)
+    create_dir(PredictorDir)
 
     # setup random seed
     seed = args.seed if not args.seed == -1 else np.random.randint(0, 100000)
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     config['seed'] = seed
     print('using seed {}'.format(seed))
     
-    checkpoint = torch.load(os.path.join(SensorDir, args.checkpoint + '.pt'), map_location='cpu')
+    checkpoint = torch.load(os.path.join(SensorDir, args.sensor_checkpoint + '.pt'), map_location='cpu')
 
     sensor = get_sensor_by_checkpoint(checkpoint)
     sensor.requires_grad_(False)
@@ -39,13 +39,13 @@ if __name__ == '__main__':
     config['latent_dim'] = sensor.latent_dim
     config['action_dim'] = dataset_config['action']
 
-    model, model_param, filename = config_predictor(config)
+    predictor, predictor_param, filename = config_predictor(config)
 
-    config['model_param'] = model_param
+    config['predictor_param'] = predictor_param
     config['log_name'] = os.path.join(PredictorLogDir, filename)
 
-    trainer_class = model.get_trainer()
+    trainer_class = predictor.get_trainer()
 
-    trainer = trainer_class(model, sensor, train_loader, val_loader, test_loader, config)
+    trainer = trainer_class(predictor, sensor, train_loader, val_loader, test_loader, config)
     trainer.train()
-    trainer.save(os.path.join(PredictortDir, '{}.pt'.format(filename)))
+    trainer.save(os.path.join(PredictorDir, '{}.pt'.format(filename)))

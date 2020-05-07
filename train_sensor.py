@@ -24,17 +24,17 @@ if __name__ == '__main__':
     create_dir(SensorDir)
 
     # config dataset
-    model_param, train_loader, val_loader, test_loader = load_sensor_dataset(config)
+    sensor_param, train_loader, val_loader, test_loader = load_sensor_dataset(config)
 
     # config model
-    model, model_param, filename = config_sensor(config, model_param)
+    sensor, sensor_param, filename = config_sensor(config, sensor_param)
 
-    config['model_param'] = model_param
+    config['sensor_param'] = sensor_param
     config['log_name'] = os.path.join(SensorLogDir, filename)
 
     # train the model
-    trainer = model.get_trainer()
-    trainer = trainer(model, train_loader, val_loader, test_loader, config)
+    trainer = sensor.get_trainer()
+    trainer = trainer(sensor, train_loader, val_loader, test_loader, config)
     trainer.train()
 
     # save final checkpoint

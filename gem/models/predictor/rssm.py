@@ -7,11 +7,11 @@ from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class RSSM(torch.nn.Module):
-    def __init__(self, obs_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, actor_mode='continuous', predict_reward=True, 
+    def __init__(self, emb_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, actor_mode='continuous', predict_reward=True, 
                  decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
-        self.obs_dim = obs_dim
+        self.emb_dim = emb_dim
         self.action_dim = action_dim
         self.stoch_dim = stoch_dim
         self.hidden_dim = hidden_dim
@@ -23,10 +23,10 @@ class RSSM(torch.nn.Module):
 
         self.rnn_cell = torch.nn.GRUCell(stoch_dim + action_dim, hidden_dim)
 
-        self.post = MLPDecoder(hidden_dim + obs_dim, stoch_dim, **decoder_config)
+        self.post = MLPDecoder(hidden_dim + emb_dim, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
-        self.obs_pre = MLPDecoder(self.state_dim, obs_dim, dist_type='fix_std', **decoder_config)
+        self.emb_pre = MLPDecoder(self.state_dim, emb_dim, dist_type='fix_std', **decoder_config)
         
         if self.action_minic:
             self.action_pre = ActionDecoder(self.state_dim, action_dim, mode=actor_mode, **decoder_config)
@@ -34,23 +34,23 @@ class RSSM(torch.nn.Module):
         if self.predict_reward:
             self.reward_pre = MLPDecoder(self.state_dim, 1, dist_type='fix_std', **decoder_config)
 
-    def _reset(self, obs0):
-        batch_size = obs0.shape[0]
-        dtype = obs0.dtype
-        device = obs0.device
+    def _reset(self, emb0):
+        batch_size = emb0.shape[0]
+        dtype = emb0.dtype
+        device = emb0.device
 
         return torch.zeros(batch_size, self.hidden_dim, dtype=dtype, device=device), \
             torch.zeros(batch_size, self.stoch_dim, dtype=dtype, device=device)
 
 
-    def forward(self, obs, action, reward=None):
+    def forward(self, emb, action, reward=None):
         """
             Inputs are all tensor[T, B, *]
         """
         
-        T, B = obs.shape[:2]
+        T, B = emb.shape[:2]
 
-        h, s = self._reset(obs[0])
+        h, s = self._reset(emb[0])
         state = torch.cat([h, s], dim=1)
 
         states = []
@@ -58,10 +58,10 @@ class RSSM(torch.nn.Module):
         prior_dists = []
 
         for i in range(T):
-            _obs = obs[i]
+            _emb = emb[i]
             _action = action[i]
 
-            h, s, posterior_dist, prior_dist = self.obs_step(h, s, _action, _obs)
+            h, s, posterior_dist, prior_dist = self.obs_step(h, s, _action, _emb)
 
             posterior_dists.append(posterior_dist)
             prior_dists.append(prior_dist)
@@ -79,11 +79,11 @@ class RSSM(torch.nn.Module):
         loss += kl_loss
 
         states = torch.cat(states, dim=0).contiguous()
-        obs_dist = self.obs_pre(states)
-        obs_loss = - torch.sum(obs_dist.log_prob(obs.view(T * B, *obs.shape[2:]))) / (T * B)
-        info['obs_loss'] = obs_loss.item()
-        prediction['obs'] = obs_dist.mode().view(T, B, *obs.shape[2:])
-        loss += obs_loss
+        emb_dist = self.emb_pre(states)
+        emb_loss = - torch.sum(emb_dist.log_prob(emb.view(T * B, *emb.shape[2:]))) / (T * B)
+        info['emb_loss'] = emb_loss.item()
+        prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
+        loss += emb_loss
 
         if self.action_minic:
             action_dist = self.action_pre(states[:-B])
@@ -103,14 +103,14 @@ class RSSM(torch.nn.Module):
 
         return loss, prediction, info
 
-    def generate(self, obs0, horizon, action=None):
+    def generate(self, emb0, horizon, action=None):
         assert action is not None or self.action_minic
 
-        pre_obs = []
+        pre_emb = []
         pre_action = []
         pre_reward = []    
 
-        h, s = self._reset(obs0)
+        h, s = self._reset(emb0)
         state = torch.cat([h, s], dim=1)
 
         for i in range(horizon):
@@ -121,14 +121,14 @@ class RSSM(torch.nn.Module):
                 _action = action[i]
 
             if i == 0:
-                h, s, _, _ = self.obs_step(h, s, _action, obs0)
+                h, s, _, _ = self.obs_step(h, s, _action, emb0)
             else:
                 h, s, _ = self.img_step(h, s, _action)
 
             state = torch.cat([h, s], dim=1)
 
-            obs_dist = self.obs_pre(state)
-            pre_obs.append(obs_dist.mode())
+            emb_dist = self.emb_pre(state)
+            pre_emb.append(emb_dist.mode())
 
             if self.action_minic:
                 pre_action.append(_action)
@@ -137,7 +137,7 @@ class RSSM(torch.nn.Module):
                 pre_reward.append(self.reward_pre(state).mode())
 
         prediction = {
-            "obs" : torch.stack(pre_obs),
+            "emb" : torch.stack(pre_emb),
         }
 
         if self.action_minic:
@@ -148,10 +148,10 @@ class RSSM(torch.nn.Module):
 
         return prediction
 
-    def obs_step(self, prev_h, prev_s, prev_a, obs):
+    def obs_step(self, prev_h, prev_s, prev_a, emb):
         next_h, _, prior_dist = self.img_step(prev_h, prev_s, prev_a)
 
-        posterior_dist = self.post(torch.cat([next_h, obs], dim=1))
+        posterior_dist = self.post(torch.cat([next_h, emb], dim=1))
 
         return next_h, posterior_dist.sample(), posterior_dist, prior_dist
 
@@ -166,17 +166,17 @@ class RSSM(torch.nn.Module):
         return PredictorTrainer
 
     # API for environmental rollout
-    def reset(self, obs):
-        h, s = self._reset(obs)
-        h, s, _, _ = self.obs_step(h, s, torch.zeros(obs.shape[0], self.action_dim, dtype=obs.dtype, device=obs.device), obs)
+    def reset(self, emb):
+        h, s = self._reset(emb)
+        h, s, _, _ = self.obs_step(h, s, torch.zeros(emb.shape[0], self.action_dim, dtype=emb.dtype, device=emb.device), emb)
         return torch.cat([h, s], dim=1)
 
-    def step(self, pre_state, action, obs=None):
+    def step(self, pre_state, action, emb=None):
         h, s = torch.split(pre_state, [self.hidden_dim, self.stoch_dim], dim=1)
-        if obs is None:
+        if emb is None:
             h, s, _ = self.img_step(h, s, action)
         else:
-            h, s, _, _ = self.obs_step(h, s, action, obs)
+            h, s, _, _ = self.obs_step(h, s, action, emb)
         next_state = torch.cat([h, s], dim=1)
         reward = self.reward_pre(next_state).mode()
         return next_state, reward

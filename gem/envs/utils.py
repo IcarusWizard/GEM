@@ -38,11 +38,13 @@ def make_env(config):
 def make_imagine_env(predictor_checkpoint_file):
     from .imagine import Imagine
     from gem.models.sensor.run_utils import get_sensor_by_checkpoint
+    from gem.models.sensor.config import SensorDir
     from gem.models.predictor.run_utils import get_predictor_by_checkpoint
-    predictor_checkpoint = torch.load(os.path.join('checkpoint', 'predictor', predictor_checkpoint_file + '.pt'), map_location='cpu')
+    from gem.models.predictor.config import PredictorDir
+    predictor_checkpoint = torch.load(os.path.join(PredictorDir, predictor_checkpoint_file + '.pt'), map_location='cpu')
     predictor = get_predictor_by_checkpoint(predictor_checkpoint)
     predictor.requires_grad_(False)
-    sensor_checkpoint = torch.load(os.path.join('checkpoint', 'sensor', predictor_checkpoint['config']['checkpoint'] + '.pt'), map_location='cpu')
+    sensor_checkpoint = torch.load(os.path.join(SensorDir, predictor_checkpoint['config']['sensor_checkpoint'] + '.pt'), map_location='cpu')
     sensor = get_sensor_by_checkpoint(sensor_checkpoint)
     sensor.requires_grad_(False)
     return Imagine(sensor, predictor)

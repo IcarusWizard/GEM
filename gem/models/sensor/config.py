@@ -7,17 +7,17 @@ SensorDir = os.path.join('checkpoint', 'sensor')
 def get_default_sensor_config():
     config = AttrDict()
     
-    # base config
+    # base config for sensor model
     config.dataset = 'dmc_finger_spin'
-    config.model = 'VAE'
+    config.sensor = 'VAE'
     config.latent_dim = 64
     config.free_nats = 20
     config.output_type = 'gauss'
     config.network_type = 'conv'
 
     # network config for MLP
-    config.hidden_layers = 0
-    config.features = 256
+    config.sensor_hidden_layers = 0
+    config.sensor_features = 256
 
     # network config for Conv
     config.conv_features = 256
@@ -26,8 +26,8 @@ def get_default_sensor_config():
     config.use_batchnorm = False
 
     # flow config
-    config.flow_features = 1024
-    config.flow_hidden_layers = 4
+    config.flow_features = 256
+    config.flow_hidden_layers = 3
     config.flow_num_transformation = 8
 
     # adversarial training config
@@ -41,9 +41,10 @@ def get_default_sensor_config():
     config.gpu = '0'
     config.workers = 9999
     config.steps = 100000
-    config.lr = 1e-3
-    config.beta1 = 0.9
-    config.beta2 = 0.999
+    config.m_lr = 6e-4
+    config.m_beta1 = 0.9
+    config.m_beta2 = 0.999
+    config.grad_clip = 100.0
 
     # log config
     config.log_step = 1000

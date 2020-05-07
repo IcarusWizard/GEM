@@ -46,7 +46,7 @@ class ConvEncoder(torch.nn.Module):
         
         conv_features = conv_features // (2 ** down_sampling)
         encoder_list = [
-            torch.nn.Conv2d(c, conv_features, 7, 1, padding=3),
+            torch.nn.Conv2d(c, conv_features, 3, 1, padding=1),
             torch.nn.ReLU(inplace=True)
         ]
 
@@ -89,7 +89,7 @@ class FullConvEncoder(torch.nn.Module):
         
         conv_features = conv_features // (2 ** down_sampling)
         encoder_list = [
-            torch.nn.Conv2d(input_c, conv_features, 7, 1, padding=3),
+            torch.nn.Conv2d(input_c, conv_features, 3, 1, padding=1),
             torch.nn.ReLU(inplace=True)
         ]
 

@@ -11,7 +11,7 @@ from gem.modules import MLP
 
 from .utils import world_model_rollout, real_env_rollout, compute_lambda_return
 
-class ACAgent(torch.nn.Module):
+class VGC(torch.nn.Module):
     def __init__(self, state_dim, action_dim, features, hidden_layers, actor_mode='continuous'):
         super().__init__()
 
@@ -34,9 +34,9 @@ class ACAgent(torch.nn.Module):
         return self.critic.parameters()
 
     def get_trainer(self):
-        return ACAgentTrainer
+        return VGCtTrainer
 
-class ACShareAgent(torch.nn.Module):
+class VGCS(torch.nn.Module):
     def __init__(self, state_dim, action_dim, features, hidden_layers, actor_mode='continuous'):
         super().__init__()
 
@@ -61,13 +61,13 @@ class ACShareAgent(torch.nn.Module):
         return chain(self.feature_net.parameters(), self.critic_head.parameters())
 
     def get_trainer(self):
-        return ACAgentTrainer
+        return VGCtTrainer
 
-class ACAgentTrainer:
-    def __init__(self, agent, world_model, real_env, observation_loader, config={}):
+class VGCtTrainer:
+    def __init__(self, controller, world_model, real_env, observation_loader, config={}):
         super().__init__()
 
-        self.agent = agent
+        self.controller = controller
         self.world_model = world_model
         self.real_env = real_env
         self.observation_loader = observation_loader
@@ -77,7 +77,7 @@ class ACAgentTrainer:
         select_gpus(self.config['gpu']) 
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        self.agent = self.agent.to(self.device)
+        self.controller = self.controller.to(self.device)
         self.world_model = self.world_model.to(self.device)
         self.dtype = self.world_model.dtype
 
@@ -87,11 +87,11 @@ class ACAgentTrainer:
         self.observation_iter = step_loader(self.observation_loader) # used in training
 
         # config optimizer
-        self.actor_optim = torch.optim.Adam(self.agent.get_actor_parameters(), lr=self.config['lr'], 
-                                      betas=(self.config['beta1'], self.config['beta2']))
+        self.actor_optim = torch.optim.Adam(self.controller.get_actor_parameters(), lr=self.config['c_lr'], 
+                                      betas=(self.config['c_beta1'], self.config['c_beta2']))
 
-        self.critic_optim = torch.optim.Adam(self.agent.get_critic_parameters(), lr=self.config['lr'], 
-                                      betas=(self.config['beta1'], self.config['beta2']))
+        self.critic_optim = torch.optim.Adam(self.controller.get_critic_parameters(), lr=self.config['c_lr'], 
+                                      betas=(self.config['c_beta1'], self.config['c_beta2']))
     
     def train(self):
         for step in tqdm(range(self.config['steps'])):
@@ -112,7 +112,7 @@ class ACAgentTrainer:
 
         # rollout world model
         rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
-            world_model_rollout(self.world_model, self.agent, obs, self.config['horizon'] + 1)
+            world_model_rollout(self.world_model, self.controller, obs, self.config['horizon'] + 1)
 
         # compute lambda return
         lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
@@ -134,12 +134,12 @@ class ACAgentTrainer:
 
         self.actor_optim.zero_grad()
         actor_loss.backward(retain_graph=True)
-        actor_grad_norm = torch.nn.utils.clip_grad_norm_(self.agent.get_actor_parameters(), self.config['grad_clip'])
+        actor_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_actor_parameters(), self.config['grad_clip'])
         self.actor_optim.step()
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
-        critic_grad_norm = torch.nn.utils.clip_grad_norm_(self.agent.get_critic_parameters(), self.config['grad_clip'])
+        critic_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_critic_parameters(), self.config['grad_clip'])
         self.critic_optim.step()
 
         info.update({
@@ -156,14 +156,14 @@ class ACAgentTrainer:
         print('In Step {}'.format(step))
         print('-' * 15)
         for k, v in self.last_train_info.items():
-            print('{0} is {1:{2}}'.format(k, v, '.5f'))
-            self.writer.add_scalar('agent/' + k, v, global_step=step)
+            print('{0} is {1:{2}}'.format(k, v, '.2f'))
+            self.writer.add_scalar('controller/' + k, v, global_step=step)
         for k, v in info_eval.items():
-            print('{0} is {1:{2}}'.format(k, v, '.5f'))
-            self.writer.add_scalar('agent/' + k, v, global_step=step)
+            print('{0} is {1:{2}}'.format(k, v, '.2f'))
+            self.writer.add_scalar('controller/' + k, v, global_step=step)
         for k, v in info_eval_real.items():
-            print('{0} is {1:{2}}'.format(k, v, '.5f'))
-            self.writer.add_scalar('agent/' + k, v, global_step=step)
+            print('{0} is {1:{2}}'.format(k, v, '.2f'))
+            self.writer.add_scalar('controller/' + k, v, global_step=step)
         
         self.writer.add_video('eval_world_model', obs_eval[:, :16].permute(1, 0, 2, 3, 4), global_step=step, fps=self.config['fps'])
         self.writer.add_video('eval_real', obs_eval_real.permute(1, 0, 2, 3, 4), global_step=step, fps=self.config['fps'])
@@ -176,7 +176,7 @@ class ACAgentTrainer:
         with torch.no_grad():
             # rollout world model
             rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
-                world_model_rollout(self.world_model, self.agent, obs, self.config['horizon'] + 1, mode='test')
+                world_model_rollout(self.world_model, self.controller, obs, self.config['horizon'] + 1, mode='test')
 
             lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
                                     _gamma=self.config['gamma'], _lambda=self.config['lambda'])
@@ -195,7 +195,7 @@ class ACAgentTrainer:
     def test_on_real_env(self):
         # rollout real world
         rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
-                rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(self.real_env, self.world_model, self.agent)
+                rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(self.real_env, self.world_model, self.controller)
 
         rollout_obs = torch.stack(rollout_obs)
         rollout_state = torch.stack(rollout_state)
@@ -212,17 +212,17 @@ class ACAgentTrainer:
 
     def save(self, filename):
         torch.save({
-            "model_state_dict" : self.agent.state_dict(),
+            "controller_state_dict" : self.controller.state_dict(),
             "actor_optimizer_state_dict" : self.actor_optim.state_dict(),
             "critic_optimizer_state_dict" : self.critic_optim.state_dict(),
             "config" : self.config,
-            "model_parameters" : self.config['model_param'],
+            "controller_parameters" : self.config['controller_param'],
             "seed" : self.config['seed'],
         }, filename)
 
     def restore(self, filename):
         checkpoint = torch.load(filename, map_location='cpu')
-        self.agent.load_state_dict(checkpoint['model_state_dict'])
-        self.agent = self.agent.to(self.device) # make sure model on right device
+        self.controller.load_state_dict(checkpoint['controller_state_dict'])
+        self.controller = self.agent.to(self.device) # make sure model on right device
         self.actor_optim.load_state_dict(checkpoint['actor_optimizer_state_dict'])
         self.critic_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])

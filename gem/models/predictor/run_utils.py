@@ -2,10 +2,10 @@ import importlib
 import torch
 
 def config_predictor(config):
-    model_param = {
-        'obs_dim' : config['latent_dim'],
+    predictor_param = {
+        'emb_dim' : config['latent_dim'],
         "action_dim" : config['action_dim'],
-        "hidden_dim" : config['hidden_dim'],
+        "hidden_dim" : config['state_hidden_dim'],
         "action_mimic" : config['action_mimic'],
         "actor_mode" : config['actor_mode'],
         "predict_reward" : config['predict_reward'],
@@ -16,23 +16,23 @@ def config_predictor(config):
         }
     }
 
-    if config['model'] == 'RSSM':
-        model_param['stoch_dim'] = config['stoch_dim']
+    if config['predictor'] == 'RSSM':
+        predictor_param['stoch_dim'] = config['state_stoch_dim']
 
     module = importlib.import_module('gem.models.predictor')
-    model_class = getattr(module, config['model'])
-    model = model_class(**model_param)
+    model_class = getattr(module, config['predictor'])
+    model = model_class(**predictor_param)
 
-    filename = config['model'] + '_' + config['checkpoint']
+    filename = config['predictor'] + '_' + config['sensor_checkpoint']
     if len(config['suffix']) > 0:
         filename = filename + '_' + config['suffix']
 
-    return model, model_param, filename
+    return model, predictor_param, filename
 
 def get_predictor_by_checkpoint(checkpoint):
-    state_dict = checkpoint['model_state_dict']
-    model_param = checkpoint['model_parameters']
-    name = checkpoint['config']['model']
+    state_dict = checkpoint['predictor_state_dict']
+    model_param = checkpoint['predictor_parameters']
+    name = checkpoint['config']['predictor']
 
     module = importlib.import_module('gem.models.predictor')
     model_class = getattr(module, name)

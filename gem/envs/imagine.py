@@ -33,7 +33,7 @@ class Imagine:
         done = False
 
         if emb is None:
-            emb = self.predictor.obs_pre(self.state).mode()
+            emb = self.predictor.emb_pre(self.state).mode()
 
         return torch.cat([emb, self.state], dim=1), reward, done, info
 

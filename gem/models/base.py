@@ -16,9 +16,8 @@ class Trainer(object):
             test_loader : torch.utils.data.DataLoader
             config : dict, parameters of configuration, i.e. steps, gpu etc.
     """
-    def __init__(self, model, train_loader, val_loader=None, test_loader=None, config={}):
+    def __init__(self, train_loader, val_loader=None, test_loader=None, config={}):
         super().__init__()
-        self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
@@ -27,8 +26,6 @@ class Trainer(object):
         # config gpus
         select_gpus(self.config['gpu']) 
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-        self.model = self.model.to(self.device)
 
         # create log writer
         self.writer = SummaryWriter(config['log_name'])

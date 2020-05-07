@@ -64,7 +64,7 @@ def load_env_dataset(name, preload, image_per_file):
 
 def load_predictor_dataset(config, batch_size=None):
     name = config['dataset']
-    horizon = config['horizon']
+    horizon = config['batch_length']
     fix_start = config['fix_start']
     preload = config['preload']
 

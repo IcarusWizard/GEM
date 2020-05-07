@@ -1,13 +1,13 @@
 import torch
 
-def world_model_rollout(world_model, agent, reset_obs, horizon=50, mode='train'):
+def world_model_rollout(world_model, controller, reset_obs, horizon=50, mode='train'):
     rollout_state = []
     rollout_action = []
     rollout_reward = []
 
     state = world_model.reset(reset_obs)
     for i in range(horizon):
-        action_dist= agent.get_action_dist(state.detach())
+        action_dist = controller.get_action_dist(state.detach())
         action = action_dist.sample() if mode == 'train' else action_dist.mode()
 
         next_state, reward, done, info = world_model.step(action)
@@ -17,12 +17,12 @@ def world_model_rollout(world_model, agent, reset_obs, horizon=50, mode='train')
 
         state = next_state
 
-    rollout_value_dist = [agent.get_critic_dist(state) for state in rollout_state]
+    rollout_value_dist = [controller.get_critic_dist(state) for state in rollout_state]
     rollout_value = [dist.mode() for dist in rollout_value_dist]
 
     return rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist
 
-def real_env_rollout(real_env, world_model, agent):
+def real_env_rollout(real_env, world_model, controller):
     rollout_state = []
     rollout_obs = []
     rollout_action = []
@@ -42,7 +42,7 @@ def real_env_rollout(real_env, world_model, agent):
         state = world_model.reset(obs)
 
         while True:
-            action_dist, value_dist = agent(state)
+            action_dist, value_dist = controller(state)
             action = action_dist.mode()
             value = value_dist.mode()
 
