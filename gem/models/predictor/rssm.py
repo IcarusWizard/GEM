@@ -77,7 +77,6 @@ class RSSM(torch.nn.Module):
         kl_loss = get_kl(stack_normal(posterior_dists), stack_normal(prior_dists))
         kl_loss = torch.sum(kl_loss) / (T * B)
         info['kl_loss'] = kl_loss.item()
-        print(f'using free_nats {self.free_nats}')
         loss += kl_loss if kl_loss > self.free_nats else kl_loss.detach()
 
         states = torch.cat(states, dim=0).contiguous()
