@@ -27,7 +27,7 @@ class RSSM(torch.nn.Module):
         self.post = MLPDecoder(hidden_dim + emb_dim, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
-        self.emb_pre = MLPDecoder(self.state_dim, emb_dim, dist_type='fix_std', **decoder_config)
+        self.emb_pre = MLPDecoder(self.state_dim, emb_dim, dist_type='fix_std', hidden_layers=0, features=256)
         
         if self.action_minic:
             self.action_pre = ActionDecoder(self.state_dim, action_dim, mode=actor_mode, **decoder_config)

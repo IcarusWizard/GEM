@@ -10,9 +10,9 @@ def get_default_sensor_config():
     # base config for sensor model
     config.dataset = 'dmc_finger_spin'
     config.sensor = 'VAE'
-    config.latent_dim = 64
+    config.latent_dim = 1024
     config.free_nats = 20.0
-    config.output_type = 'gauss'
+    config.output_type = 'fix_std'
     config.network_type = 'conv'
 
     # network config for MLP

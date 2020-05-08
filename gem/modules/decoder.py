@@ -36,25 +36,16 @@ class ConvDecoder(torch.nn.Module):
         super().__init__()
         self.dist_type = dist_type
 
-        res_layers = list(reversed(res_layers))
-        
-        feature_shape = (conv_features, h // (2 ** down_sampling), w // (2 ** down_sampling))
-
         decoder_list = [
-            MLP(latent_dim, np.prod(feature_shape), mlp_features, mlp_layers, 'leakyrelu'),
-            Unflatten(feature_shape),
+            Unflatten((1024, 1, 1)),
+            torch.nn.ConvTranspose2d(conv_features * 4, conv_features // 2, 5, 2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.ConvTranspose2d(conv_features // 2, conv_features // 4, 5, 2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.ConvTranspose2d(conv_features // 4, conv_features // 8, 6, 2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.ConvTranspose2d(conv_features // 8, output_c, 6, 2),
         ]
-
-        conv_features = conv_features
-        for i in range(down_sampling):
-            for j in range(res_layers[i]):
-                decoder_list.append(ResBlock(conv_features, batchnorm))
-            decoder_list.append(torch.nn.ConvTranspose2d(conv_features, conv_features // 2, 4, 2, padding=1))
-            decoder_list.append(torch.nn.ReLU(inplace=True))
-            conv_features //= 2
-
-        _output_c = 2 * output_c if self.dist_type == 'gauss' else output_c
-        decoder_list.append(torch.nn.Conv2d(conv_features, _output_c, 3, stride=1, padding=1))
         
         self.decoder = torch.nn.Sequential(*decoder_list)
 

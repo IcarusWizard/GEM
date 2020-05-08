@@ -48,6 +48,7 @@ class MixTrainer:
 
         pre_emb = prediction['emb'].view(T * B, -1)
         pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
+        print(obs.shape, pre_obs_dist.mode().shape)
         reconstruction_loss = - pre_obs_dist.log_prob(obs)
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
 
