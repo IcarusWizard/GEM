@@ -8,7 +8,7 @@ class Buffer:
 
     def _process_data(self, data):
         if len(data.shape) == 4:
-            data = data / 255.0
+            data = data / 255.0 - 0.5
             data = np.transpose(data, (0, 3, 1, 2))
         return torch.as_tensor(data, dtype=torch.float32).contiguous()
 

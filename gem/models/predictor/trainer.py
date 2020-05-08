@@ -60,21 +60,27 @@ class PredictorTrainer(Trainer):
             # log compressed video
             compressed_video = self.sensor.decode(emb.view(-1, emb.shape[-1]))
             compressed_video = compressed_video.view(*emb.shape[:2], *compressed_video.shape[1:]).permute(1, 0, 2, 3, 4)
-            self.writer.add_video('compressed_video', torch.cat([images, compressed_video, (compressed_video - images + 1) / 2], dim=0), global_step=step, fps=self.config['fps'])
+            self.writer.add_video('compressed_video', 
+                torch.clamp(torch.cat([images, compressed_video, (compressed_video - images + 1) / 2], dim=0) + 0.5, 0, 1), 
+                global_step=step, fps=self.config['fps'])
 
             # log predicted video
             _, prediction, _ = self.predictor(emb, action, reward)
             predicted_emb = prediction['emb']
             predicted_video = self.sensor.decode(predicted_emb.view(-1, emb.shape[-1]))
             predicted_video = predicted_video.view(*emb.shape[:2], *predicted_video.shape[1:]).permute(1, 0, 2, 3, 4)
-            self.writer.add_video('predicted_video', torch.cat([images, predicted_video, (predicted_video - images + 1) / 2], dim=0), global_step=step, fps=self.config['fps'])
+            self.writer.add_video('predicted_video', 
+                torch.clamp(torch.cat([images, predicted_video, (predicted_video - images + 1) / 2], dim=0) + 0.5, 0, 1), 
+                global_step=step, fps=self.config['fps'])
 
             # log generated video
             generation = self.predictor.generate(emb[0], emb.shape[0], action)
             generated_emb = generation['emb']
             generated_video = self.sensor.decode(generated_emb.view(-1, emb.shape[-1]))
             generated_video = generated_video.view(*emb.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
-            self.writer.add_video('generated_video_true_action', torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0), global_step=step, fps=self.config['fps'])
+            self.writer.add_video('generated_video_true_action', 
+                torch.clamp(torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0) + 0.5, 0, 1), 
+                global_step=step, fps=self.config['fps'])
 
             # log generated video (action also generated)
             if self.config['action_mimic']:
@@ -82,7 +88,9 @@ class PredictorTrainer(Trainer):
                 generated_emb = generation['emb']
                 generated_video = self.sensor.decode(generated_emb.view(-1, emb.shape[-1]))
                 generated_video = generated_video.view(*emb.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
-                self.writer.add_video('generated_video_fake_action', torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0), global_step=step, fps=self.config['fps'])
+                self.writer.add_video('generated_video_fake_action', 
+                    torch.clamp(torch.cat([images, generated_video, (generated_video - images + 1) / 2], dim=0) + 0.5, 0, 1), 
+                    global_step=step, fps=self.config['fps'])
 
                 # generate with coder prior
                 emb0 = self.sensor.sample_prior(8)
@@ -90,7 +98,8 @@ class PredictorTrainer(Trainer):
                 generated_emb = generation['emb']
                 generated_video = self.sensor.decode(generated_emb.view(-1, emb.shape[-1]))
                 generated_video = generated_video.view(emb.shape[0], -1, *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
-                self.writer.add_video('prior_video_fake_action', generated_video, global_step=step, fps=self.config['fps'])
+                self.writer.add_video('prior_video_fake_action', 
+                    torch.clamp(generated_video + 0.5, 0, 1), global_step=step, fps=self.config['fps'])
 
         self.writer.flush()
 

@@ -33,7 +33,7 @@ if __name__ == '__main__':
     index = list(range(args.start, args.start + args.step * 8, args.step))
 
     inputs = image[index]
-    inputs = torch.as_tensor(inputs / 255.0, dtype=torch.float32).permute(0, 3, 1, 2)
+    inputs = torch.as_tensor(inputs / 255.0 - 0.5, dtype=torch.float32).permute(0, 3, 1, 2)
 
     for j in range(8):
         ax[0, j].imshow(inputs[j].permute(1, 2, 0).cpu().numpy())

@@ -39,7 +39,7 @@ if __name__ == '__main__':
     model = get_sensor_by_checkpoint(checkpoint).to(device)
     model.requires_grad_(False)
 
-    image = torch.as_tensor((image / 255.0), dtype=torch.float32).permute(2, 0, 1).unsqueeze(dim=0).to(device)
+    image = torch.as_tensor((image / 255.0 - 0.5), dtype=torch.float32).permute(2, 0, 1).unsqueeze(dim=0).to(device)
 
     z = model.encode(image)
     _image = model.decode(z)[0].cpu().permute(1, 2, 0).numpy()

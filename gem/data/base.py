@@ -29,7 +29,7 @@ class SequenceDataset(torch.utils.data.Dataset):
 
     def process_data(self, value):
         if value.dtype == np.uint8:
-            value = (value / 255.0).astype(np.float32) # normalize
+            value = (value / 255.0 - 0.5).astype(np.float32) # normalize
         
         if len(value.shape) == 3: # gray image
             value = value[:, np.newaxis]

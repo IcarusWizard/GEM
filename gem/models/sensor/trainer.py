@@ -52,11 +52,11 @@ class VAETrainer(Trainer):
         self.writer.add_scalar('sensor/grad_norm', self.last_train_info['sensor_grad_norm'], global_step=step)
         
         with torch.no_grad():
-            imgs = torch.clamp(self.sensor.sample(64), 0, 1)
+            imgs = torch.clamp(self.sensor.sample(64) + 0.5, 0, 1)
             self.writer.add_images('samples', imgs, global_step=step)
             batch = self.parse_batch(next(self.train_iter))
             input_imgs = batch[:32]
-            reconstructions = torch.clamp(self.sensor.decode(self.sensor.encode(input_imgs)), 0, 1)
+            reconstructions = torch.clamp(self.sensor.decode(self.sensor.encode(input_imgs)) + 0.5, 0, 1)
             inputs_and_reconstructions = torch.stack([input_imgs, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
             self.writer.add_images('inputs_and_reconstructions', inputs_and_reconstructions, global_step=step)
 
