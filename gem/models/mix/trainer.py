@@ -44,18 +44,29 @@ class MixTrainer:
         obs = obs.view(T * B, *obs.shape[2:])
         emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
-        predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
-
-        pre_emb = prediction['emb'].view(T * B, -1)
+        pre_emb = emb.view(T * B, -1)
         pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
         reconstruction_loss = - pre_obs_dist.log_prob(obs)
         reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
 
-        loss = reconstruction_loss + predictor_loss
-        info.update({
+        loss = reconstruction_loss
+        info = {
             "loss" : loss.item(),
             "renconstruction_loss" : reconstruction_loss.item(),
-        })
+        }
+
+        # predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
+
+        # pre_emb = prediction['emb'].view(T * B, -1)
+        # pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
+        # reconstruction_loss = - pre_obs_dist.log_prob(obs)
+        # reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+
+        # loss = reconstruction_loss + predictor_loss
+        # info.update({
+        #     "loss" : loss.item(),
+        #     "renconstruction_loss" : reconstruction_loss.item(),
+        # })
 
         return loss, info
     
