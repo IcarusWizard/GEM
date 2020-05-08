@@ -66,7 +66,7 @@ class MixTrainer:
 
         self.optim.zero_grad()
         loss.backward()
-        grad_norm = torch.nn.utils.clip_grad_norm_(chain(self.sensor.parameters(), self.predictor.parameters()), self.config['grad_clip'])
+        grad_norm = torch.nn.utils.clip_grad_norm_(chain(self.sensor.parameters(), self.predictor.parameters()), self.config['m_grad_clip'])
         self.optim.step()
         info.update({"model_grad_norm" : grad_norm})
 

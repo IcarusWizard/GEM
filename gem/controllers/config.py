@@ -34,7 +34,7 @@ def get_default_controller_config():
     config.c_lr = 8e-5
     config.c_beta1 = 0.9
     config.c_beta2 = 0.999
-    config.grad_clip = 100.0
+    config.c_grad_clip = 100.0
 
     # log config
     config.log_step = 1000

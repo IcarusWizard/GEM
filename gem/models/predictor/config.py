@@ -28,10 +28,10 @@ def get_default_predictor_config():
     config.gpu = '0'
     config.workers = 9999
     config.steps = 50000
-    config.m_lr = 4e-6
+    config.m_lr = 1e-3
     config.m_beta1 = 0.9
     config.m_beta2 = 0.999
-    config.grad_clip = 100.0
+    config.m_grad_clip = 1000.0
 
     # log config
     config.log_step = 1000

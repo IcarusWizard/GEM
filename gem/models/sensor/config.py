@@ -11,8 +11,8 @@ def get_default_sensor_config():
     config.dataset = 'dmc_finger_spin'
     config.sensor = 'VAE'
     config.latent_dim = 64
-    config.free_nats = 20.0
-    config.output_type = 'gauss'
+    config.free_nats = 3.0
+    config.output_type = 'fix_std'
     config.network_type = 'conv'
 
     # network config for MLP
@@ -41,10 +41,10 @@ def get_default_sensor_config():
     config.gpu = '0'
     config.workers = 9999
     config.steps = 100000
-    config.m_lr = 6e-4
+    config.m_lr = 1e-3
     config.m_beta1 = 0.9
     config.m_beta2 = 0.999
-    config.grad_clip = 100.0
+    config.m_grad_clip = 1000.0
 
     # log config
     config.log_step = 1000

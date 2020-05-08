@@ -134,12 +134,12 @@ class VGCtTrainer:
 
         self.actor_optim.zero_grad()
         actor_loss.backward(retain_graph=True)
-        actor_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_actor_parameters(), self.config['grad_clip'])
+        actor_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_actor_parameters(), self.config['c_grad_clip'])
         self.actor_optim.step()
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
-        critic_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_critic_parameters(), self.config['grad_clip'])
+        critic_grad_norm = torch.nn.utils.clip_grad_norm_(self.controller.get_critic_parameters(), self.config['c_grad_clip'])
         self.critic_optim.step()
 
         info.update({
