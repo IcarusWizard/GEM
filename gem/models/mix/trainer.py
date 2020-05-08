@@ -115,38 +115,38 @@ class MixTrainer:
             emb = emb.permute(1, 0, 2).contiguous() # [T, B]
 
             # log compressed video
-            compressed_video = self.sensor.decode(emb.view(-1, emb.shape[-1]))
+            compressed_video = torch.clamp(self.sensor.decode(emb.view(-1, emb.shape[-1])), -0.5, 0.5)
             compressed_video = compressed_video.view(*emb.shape[:2], *compressed_video.shape[1:]).permute(1, 0, 2, 3, 4)
             self.writer.add_video('compressed_video', 
-                torch.clamp(torch.cat([obs, compressed_video, (compressed_video - obs + 1) / 2], dim=0) + 0.5, 0, 1), 
+                torch.cat([obs + 0.5, compressed_video + 0.5, (compressed_video - obs + 1) / 2], dim=0), 
                 global_step=step, fps=self.config['fps'])
 
             # log predicted video
             _, prediction, _ = self.predictor(emb, action, reward)
             predicted_emb = prediction['emb']
-            predicted_video = self.sensor.decode(predicted_emb.view(-1, emb.shape[-1]))
+            predicted_video = torch.clamp(self.sensor.decode(predicted_emb.view(-1, emb.shape[-1])), -0.5, 0.5)
             predicted_video = predicted_video.view(*emb.shape[:2], *predicted_video.shape[1:]).permute(1, 0, 2, 3, 4)
             self.writer.add_video('predicted_video', 
-                torch.clamp(torch.cat([obs, predicted_video, (predicted_video - obs + 1) / 2], dim=0) + 0.5, 0, 1), 
+                torch.cat([obs + 0.5, predicted_video + 0.5, (predicted_video - obs + 1) / 2], dim=0),
                 global_step=step, fps=self.config['fps'])
 
             # log generated video
             generation = self.predictor.generate(emb[0], emb.shape[0], action)
             generated_emb = generation['emb']
-            generated_video = self.sensor.decode(generated_emb.view(-1, emb.shape[-1]))
+            generated_video = torch.clamp(self.sensor.decode(generated_emb.view(-1, emb.shape[-1])), -0.5, 0.5)
             generated_video = generated_video.view(*emb.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
             self.writer.add_video('generated_video_true_action', 
-                torch.clamp(torch.cat([obs, generated_video, (generated_video - obs + 1) / 2], dim=0) + 0.5, 0, 1), 
+                torch.cat([obs + 0.5, generated_video + 0.5, (generated_video - obs + 1) / 2], dim=0), 
                 global_step=step, fps=self.config['fps'])
 
             # log generated video (action also generated)
             if self.config['action_mimic']:
                 generation = self.predictor.generate(emb[0], emb.shape[0])
                 generated_emb = generation['emb']
-                generated_video = self.sensor.decode(generated_emb.view(-1, emb.shape[-1]))
+                generated_video = torch.clamp(self.sensor.decode(generated_emb.view(-1, emb.shape[-1])), -0.5, 0.5)
                 generated_video = generated_video.view(*emb.shape[:2], *generated_video.shape[1:]).permute(1, 0, 2, 3, 4)
                 self.writer.add_video('generated_video_fake_action', 
-                    torch.clamp(torch.cat([obs, generated_video, (generated_video - obs + 1) / 2], dim=0) + 0.5, 0, 1), 
+                    torch.cat([obs + 0.5, generated_video + 0.5, (generated_video - obs + 1) / 2], dim=0), 
                     global_step=step, fps=self.config['fps'])
 
         self.writer.flush()
