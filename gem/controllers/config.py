@@ -7,9 +7,13 @@ ControllerDir = os.path.join('checkpoint', 'controller')
 def get_default_controller_config():
     config = AttrDict()
 
-    # base controller config
+    # world model config
+    config.model_checkpoint = ''
     config.predictor_checkpoint = 'RSSM_VAE_dmc_finger_spin'
     config.dataset = 'dmc_finger_spin'
+    config.with_emb = True
+
+    # base controller config
     config.controller = 'VGC'
     config.controller_hidden_layers = 3
     config.controller_features = 256

@@ -4,11 +4,12 @@ import torch
 
 class Imagine:
 
-    def __init__(self, sensor, predictor):
+    def __init__(self, sensor, predictor, with_emb=True):
         super().__init__()
         self.sensor = sensor
         self.predictor = predictor
-        self.state_dim = sensor.latent_dim + predictor.state_dim
+        self.with_emb = with_emb
+        self.state_dim = sensor.latent_dim + predictor.state_dim if self.with_emb else predictor.state_dim
         self.action_dim = predictor.action_dim
 
         self.dtype = next(self.sensor.parameters()).dtype
@@ -32,22 +33,31 @@ class Imagine:
         info = None
         done = False
 
-        if emb is None:
-            emb = self.predictor.emb_pre(self.state).mode()
+        if self.with_emb:
+            if emb is None:
+                emb = self.predictor.emb_pre(self.state).mode()
 
-        return torch.cat([emb, self.state], dim=1), reward, done, info
+            return torch.cat([emb, self.state], dim=1), reward, done, info
+        else:
+            return self.state, reward, done, info
 
     def reset(self, obs):
         emb = self.sensor.encode(obs)
         self.state = self.predictor.reset(emb)
-        return torch.cat([emb, self.state], dim=1)
+        if self.with_emb:
+            return torch.cat([emb, self.state], dim=1)
+        else:
+            return self.state
 
     def render(self, state):
         with_time = len(state.shape) == 3
         if with_time:
             T, B, S = state.shape
             state = state.view(-1, S)
-        emb, state = torch.split(state, (self.sensor.latent_dim, self.predictor.state_dim), dim=1)
+        if self.with_emb:
+            emb, state = torch.split(state, (self.sensor.latent_dim, self.predictor.state_dim), dim=1)
+        else:
+            emb = self.predictor.emb_pre(state).mode()
         obs = self.sensor.decode(emb)
         if with_time:
             obs = obs.view(T, B, *obs.shape[1:])
