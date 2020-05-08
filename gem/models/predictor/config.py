@@ -34,7 +34,7 @@ def get_default_predictor_config():
     config.grad_clip = 100.0
 
     # log config
-    config.log_step = 1000
+    config.log_step = 100
     config.fps = 20
     config.suffix = ''
 
