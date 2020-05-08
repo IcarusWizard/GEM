@@ -14,7 +14,7 @@ def config_world_model(config, dataset_config):
     sensor, sensor_param, _ = config_sensor(config, sensor_param)
     predictor, predictor_param, _ = config_predictor(config)
 
-    filename = config['predictor'] + '_' + config['sensor_checkpoint']
+    filename = config['predictor'] + '_' + config['sensor'] + '_' + config['dataset']
     if len(config['suffix']) > 0:
         filename = filename + '_' + config['suffix']
 

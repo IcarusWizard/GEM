@@ -44,7 +44,7 @@ class MixTrainer:
         obs = obs.view(T * B, *obs.shape[2:])
         emb = self.sensor.encode(obs, output_dist=True).sample().view(T, B, -1)
 
-        predictor_loss, prediction, info = self.predictor(emb, action, reward)
+        predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
 
         pre_emb = prediction['emb'].view(T * B, -1)
         pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
@@ -87,7 +87,7 @@ class MixTrainer:
         for k in val_info:
             self.writer.add_scalars('world_model/' + k, {'train' : nats2bits(self.last_train_info[k]), 
                                     'val' : nats2bits(val_info[k])}, global_step=step)
-        self.writer.add_scalar('world_model/grad_norm', self.last_train_info['model_grad_norm'])
+        self.writer.add_scalar('world_model/grad_norm', self.last_train_info['model_grad_norm'], global_step=step)
 
         with torch.no_grad():
             batch = next(self.train_iter)

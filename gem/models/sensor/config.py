@@ -21,7 +21,7 @@ def get_default_sensor_config():
 
     # network config for Conv
     config.conv_features = 256
-    config.down_sampling = 3
+    config.down_sampling = 4
     config.res_layers = [0]
     config.use_batchnorm = False
 

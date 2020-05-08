@@ -43,7 +43,7 @@ class RSSM(torch.nn.Module):
             torch.zeros(batch_size, self.stoch_dim, dtype=dtype, device=device)
 
 
-    def forward(self, emb, action, reward=None):
+    def forward(self, emb, action, reward=None, use_emb_loss=True):
         """
             Inputs are all tensor[T, B, *]
         """
@@ -80,10 +80,11 @@ class RSSM(torch.nn.Module):
 
         states = torch.cat(states, dim=0).contiguous()
         emb_dist = self.emb_pre(states)
-        emb_loss = - torch.sum(emb_dist.log_prob(emb.view(T * B, *emb.shape[2:]))) / (T * B)
-        info['emb_loss'] = emb_loss.item()
         prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
-        loss += emb_loss
+        if use_emb_loss:
+            emb_loss = - torch.sum(emb_dist.log_prob(emb.view(T * B, *emb.shape[2:]))) / (T * B)
+            info['emb_loss'] = emb_loss.item()
+            loss += emb_loss
 
         if self.action_minic:
             action_dist = self.action_pre(states[:-B])

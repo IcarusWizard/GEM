@@ -44,7 +44,7 @@ class PredictorTrainer(Trainer):
         for k in val_info.keys():
             self.writer.add_scalars('predictor/' + k, {'train' : nats2bits(self.last_train_info[k]), 
                                     'val' : nats2bits(val_info[k])}, global_step=step)
-        self.writer.add_scalar('predictor/grad_norm', self.last_train_info['predictor_grad_norm'])
+        self.writer.add_scalar('predictor/grad_norm', self.last_train_info['predictor_grad_norm'], global_step=step)
         
         with torch.no_grad():
 
