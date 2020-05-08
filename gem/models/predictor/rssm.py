@@ -7,7 +7,7 @@ from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class RSSM(torch.nn.Module):
-    def __init__(self, emb_dim, action_dim, stoch_dim, hidden_dim, action_mimic=False, actor_mode='continuous', predict_reward=True, 
+    def __init__(self, emb_dim, action_dim, stoch_dim, hidden_dim, free_nats=3.0, action_mimic=False, actor_mode='continuous', predict_reward=True, 
                  decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
@@ -15,6 +15,7 @@ class RSSM(torch.nn.Module):
         self.action_dim = action_dim
         self.stoch_dim = stoch_dim
         self.hidden_dim = hidden_dim
+        self.free_nats = free_nats
         self.action_minic = action_mimic
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
@@ -76,7 +77,8 @@ class RSSM(torch.nn.Module):
         kl_loss = get_kl(stack_normal(posterior_dists), stack_normal(prior_dists))
         kl_loss = torch.sum(kl_loss) / (T * B)
         info['kl_loss'] = kl_loss.item()
-        loss += kl_loss
+        print(f'using free_nats {self.free_nats}')
+        loss += kl_loss if kl_loss > self.free_nats else kl_loss.detach()
 
         states = torch.cat(states, dim=0).contiguous()
         emb_dist = self.emb_pre(states)

@@ -12,6 +12,7 @@ def get_default_predictor_config():
     config.sensor_checkpoint = 'VAE_dmc_finger_spin'
     config.state_hidden_dim = 256
     config.state_stoch_dim = 32
+    config.free_nats = 3.0
     config.decoder_hidden_layers = 2
     config.decoder_features = 256
     config.decoder_activation = 'elu'

@@ -11,7 +11,7 @@ def get_default_sensor_config():
     config.dataset = 'dmc_finger_spin'
     config.sensor = 'VAE'
     config.latent_dim = 64
-    config.free_nats = 20
+    config.free_nats = 20.0
     config.output_type = 'gauss'
     config.network_type = 'conv'
 

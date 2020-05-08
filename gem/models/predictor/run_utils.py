@@ -18,6 +18,7 @@ def config_predictor(config):
 
     if config['predictor'] == 'RSSM':
         predictor_param['stoch_dim'] = config['state_stoch_dim']
+        predictor_param['free_nats'] = config['free_nats']
 
     module = importlib.import_module('gem.models.predictor')
     model_class = getattr(module, config['predictor'])

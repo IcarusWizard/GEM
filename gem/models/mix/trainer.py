@@ -42,7 +42,7 @@ class MixTrainer:
 
         T, B = obs.shape[:2]
         obs = obs.view(T * B, *obs.shape[2:])
-        emb = self.sensor.encode(obs, output_dist=True).sample().view(T, B, -1)
+        emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
         predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
 
@@ -93,15 +93,15 @@ class MixTrainer:
             batch = next(self.train_iter)
             obs, action, reward = self.parse_batch(batch)
 
-            T, B = obs.shape[:2]
-            _obs = obs.view(T * B, *obs.shape[2:])
-            emb = self.sensor.encode(_obs).view(T, B, -1)
-
-            obs = obs[:, :8].permute(1, 0, 2, 3, 4).contiguous()
-            emb = emb[:, :8].contiguous()
-            action = action[:, :8].contiguous()
+            obs = obs[:, :8].permute(1, 0, 2, 3, 4).contiguous() # [B, T]
+            action = action[:, :8].contiguous() # [T, B]
             if self.config['predict_reward']:
-                reward = reward[:, :8].contiguous()
+                reward = reward[:, :8].contiguous() # [T, B]
+
+            B, T = obs.shape[:2]
+            _obs = obs.view(B * T, *obs.shape[2:])
+            emb = self.sensor.encode(_obs).view(B, T, -1) # [B, T]
+            emb = emb.permute(1, 0, 2).contiguous() # [T, B]
 
             # log compressed video
             compressed_video = self.sensor.decode(emb.view(-1, emb.shape[-1]))
