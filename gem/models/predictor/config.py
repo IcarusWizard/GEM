@@ -10,13 +10,13 @@ def get_default_predictor_config():
     # base config
     config.predictor = 'RSSM'
     config.sensor_checkpoint = 'VAE_dmc_finger_spin'
-    config.state_hidden_dim = 256
-    config.state_stoch_dim = 32
+    config.state_hidden_dim = 200
+    config.state_stoch_dim = 30
     config.free_nats = 3.0
-    config.decoder_hidden_layers = 2
-    config.decoder_features = 256
+    config.decoder_hidden_layers = 1
+    config.decoder_features = 200
     config.decoder_activation = 'elu'
-    config.action_mimic = True
+    config.action_mimic = False
     config.actor_mode = 'continuous'
 
     # training config

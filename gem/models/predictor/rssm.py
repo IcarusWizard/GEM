@@ -22,7 +22,12 @@ class RSSM(torch.nn.Module):
 
         self.state_dim = hidden_dim + stoch_dim
 
-        self.rnn_cell = torch.nn.GRUCell(stoch_dim + action_dim, hidden_dim)
+        self.mix_in = torch.nn.Sequential(
+            torch.nn.Linear(stoch_dim + action_dim, hidden_dim),
+            torch.nn.ELU(inplace=True)
+        )
+
+        self.rnn_cell = torch.nn.GRUCell(hidden_dim, hidden_dim)
 
         self.post = MLPDecoder(hidden_dim + emb_dim, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
@@ -158,7 +163,7 @@ class RSSM(torch.nn.Module):
         return next_h, posterior_dist.sample(), posterior_dist, prior_dist
 
     def img_step(self, prev_h, prev_s, prev_a):
-        next_h = self.rnn_cell(torch.cat([prev_s, prev_a], dim=1), prev_h) 
+        next_h = self.rnn_cell(self.mix_in(torch.cat([prev_s, prev_a], dim=1)), prev_h) 
 
         prior_dist = self.prior(next_h)
 
