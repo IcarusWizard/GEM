@@ -57,7 +57,7 @@ class VAETrainer(Trainer):
             batch = self.parse_batch(next(self.train_iter))
             input_imgs = batch[:32]
             reconstructions = torch.clamp(self.sensor.decode(self.sensor.encode(input_imgs)) + 0.5, 0, 1)
-            inputs_and_reconstructions = torch.stack([input_imgs, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
+            inputs_and_reconstructions = torch.stack([input_imgs + 0.5, reconstructions], dim=1).view(input_imgs.shape[0] * 2, *input_imgs.shape[1:])
             self.writer.add_images('inputs_and_reconstructions', inputs_and_reconstructions, global_step=step)
 
         self.writer.flush()
