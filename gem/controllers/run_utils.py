@@ -14,7 +14,9 @@ def config_controller(config):
     model_class = getattr(module, config['controller'])
     model = model_class(**model_param)
 
-    filename = config['controller'] + '_' + config['predictor_checkpoint']
+    checkpoint_name = config['predictor_checkpoint'] if len(config['model_checkpoint']) == 0 else config['model_checkpoint']
+
+    filename = config['controller'] + '_' + checkpoint_name
     if len(config['suffix']) > 0:
         filename = filename + '_' + config['suffix']
 
