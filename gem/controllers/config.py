@@ -11,7 +11,7 @@ def get_default_controller_config():
     config.model_checkpoint = ''
     config.predictor_checkpoint = 'RSSM_VAE_dmc_finger_spin'
     config.dataset = 'dmc_finger_spin'
-    config.with_emb = True
+    config.with_emb = False
 
     # base controller config
     config.controller = 'VGC'

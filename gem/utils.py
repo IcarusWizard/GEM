@@ -89,6 +89,8 @@ def expert_build(max_index):
 def get_config_type(v):
     if isinstance(v, list):
         return lambda x : list(map(int, x.split(',')))
+    if isinstance(v, bool):
+        return lambda x: bool([False, True].index(int(x)))
     return type(v)
 
 def parse_args(config={}):
