@@ -167,9 +167,9 @@ class VGCtTrainer:
         
         self.writer.add_video('eval_world_model', torch.clamp(obs_eval[:, :16].permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
             global_step=step, fps=self.config['fps'])
-        self.writer.add_video('eval_real', torch.clamp(obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
-            global_step=step, fps=self.config['fps'])
-        self.writer.add_video('eval_prediction', torch.clamp(pre_obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
+        obs_eval_real = torch.clamp(obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
+        pre_obs_eval_real = torch.clamp(pre_obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
+        self.writer.add_video('eval_real', torch.cat([obs_eval_real, pre_obs_eval_real, (pre_obs_eval_real - obs_eval_real + 1) / 2], dim=4), 
             global_step=step, fps=self.config['fps'])
 
         self.writer.flush()

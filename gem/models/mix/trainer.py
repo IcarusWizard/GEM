@@ -36,6 +36,7 @@ class MixTrainer:
 
             if step % self.config['log_step'] == 0:
                 self.log_step(step)
+        self.log_step(self.config['steps'])
 
     def get_loss_info(self, batch):
         obs, action, reward = self.parse_batch(batch)
