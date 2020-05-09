@@ -64,12 +64,13 @@ class VGCS(torch.nn.Module):
         return VGCtTrainer
 
 class VGCtTrainer:
-    def __init__(self, controller, world_model, real_env, observation_loader, config={}):
+    def __init__(self, controller, world_model, real_env, buffer=None, observation_loader=None, config={}):
         super().__init__()
 
         self.controller = controller
         self.world_model = world_model
         self.real_env = real_env
+        self.buffer = buffer
         self.observation_loader = observation_loader
         self.config = config
 
@@ -84,7 +85,12 @@ class VGCtTrainer:
         # create log writer
         self.writer = SummaryWriter(config['log_name'])
 
-        self.observation_iter = step_loader(self.observation_loader) # used in training
+        if self.buffer is not None:
+            from gem.envs.wrapper import Collect
+            self.real_env = Collect(self.real_env, [self.buffer.add])
+            self.observation_iter = self.buffer.generator(self.config['batch_size'])
+        else:
+            self.observation_iter = step_loader(self.observation_loader) # used in training
 
         # config optimizer
         self.actor_optim = torch.optim.Adam(self.controller.get_actor_parameters(), lr=self.config['c_lr'], 

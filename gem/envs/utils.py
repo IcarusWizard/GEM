@@ -59,6 +59,34 @@ def make_imagine_env_from_model(model_checkpoint_file, with_emb=True):
     predictor.requires_grad_(False)
     return Imagine(sensor, predictor, with_emb=with_emb)
 
+def get_buffer(config):
+    from gem.data.buffer import Buffer
+    from .wrapper import Collect
+    env = make_env(config)
+    buffer = Buffer(config['buffer_size'])
+
+    env = Collect(env, [buffer.add])
+
+    action_space = env.action_space
+
+    print('Prefilling Buffer ......')
+    for i in range(config['prefill']):
+        env.reset()
+
+        num = 0
+        start_time = time.time()
+        
+        while True:
+            obs, action, done, info = env.step(action_space.sample())
+            num += 1
+
+            if done:
+                print(f'use {time.time() - start_time} s to generate sequence {i} with length {num}')
+                break
+    
+    return buffer
+
+
 def save_episodes(datadir, ep):
     traj_id = len(os.listdir(datadir))
     length = list(ep.values())[0].shape[0]

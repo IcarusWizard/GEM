@@ -7,7 +7,7 @@ from tqdm import tqdm
 from gem.controllers.run_utils import config_controller
 from gem.controllers.config import get_default_controller_config, ControllerDir, ControllerLogDir
 from gem.data import load_sensor_dataset
-from gem.envs.utils import make_imagine_env_from_predictor, make_imagine_env_from_model, make_env
+from gem.envs.utils import make_imagine_env_from_predictor, make_imagine_env_from_model, make_env, get_buffer
 from gem.utils import setup_seed, create_dir, parse_args
 
 if __name__ == '__main__':
@@ -32,8 +32,15 @@ if __name__ == '__main__':
     config['state_dim'] = world_model.state_dim
     config['action_dim'] = world_model.action_dim
 
-    # config dataset
-    _, observation_loader, _, _ = load_sensor_dataset(config)
+    
+    if config['use_buffer']:
+        # get buffer
+        buffer = get_buffer(config)
+        observation_loader = None
+    else:
+        # config dataset
+        _, observation_loader, _, _ = load_sensor_dataset(config)
+        buffer = None
 
     controller, controller_param, filename = config_controller(config)
 
@@ -42,6 +49,6 @@ if __name__ == '__main__':
 
     trainer_class = controller.get_trainer()
 
-    trainer = trainer_class(controller, world_model, real_env, observation_loader, config)
+    trainer = trainer_class(controller, world_model, real_env, buffer, observation_loader, config)
     trainer.train()
     trainer.save(os.path.join(ControllerDir, '{}.pt'.format(filename)))

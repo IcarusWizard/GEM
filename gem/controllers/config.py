@@ -27,6 +27,11 @@ def get_default_controller_config():
     config.action_repeat = 2
     config.max_length = 1000
 
+    # buffer config
+    config.use_buffer = False
+    config.prefill = 5
+    config.buffer_size = 200
+
     # training config
     config.seed = -1 
     config.batch_size = 128
@@ -41,7 +46,7 @@ def get_default_controller_config():
     config.c_grad_clip = 100.0
 
     # log config
-    config.log_step = 1000
+    config.log_step = 200
     config.fps = 20
     config.suffix = ''
 
