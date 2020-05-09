@@ -38,7 +38,7 @@ def real_env_rollout(real_env, world_model, controller):
     with torch.no_grad():
         obs = real_env.reset()
         obs = obs['image']
-        obs = torch.as_tensor(obs / 255.0, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0).contiguous()
+        obs = torch.as_tensor(obs / 255.0 - 0.5, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0).contiguous()
         state = world_model.reset(obs)
 
         while True:
@@ -50,7 +50,7 @@ def real_env_rollout(real_env, world_model, controller):
             _action = action[0].cpu().numpy()
             next_obs, reward, done, info = real_env.step(_action)
             next_obs = next_obs['image']
-            next_obs = torch.as_tensor(next_obs / 255.0, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0).contiguous()
+            next_obs = torch.as_tensor(next_obs / 255.0 - 0.5, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0).contiguous()
 
             # step world model
             next_state, predict_reward, _, _ = world_model.step(action, next_obs)
