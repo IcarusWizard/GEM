@@ -47,7 +47,7 @@ class BijectoredDistribution:
             estimate the entropy with samples
         """
         _, logprob = self.sample_with_logprob(samples)
-        return - torch.mean(logprob)
+        return - torch.sum(logprob) / samples
 
 def atanh(x): 
     return 0.5 * torch.log((1 + x) / (1 - x + EPS))
