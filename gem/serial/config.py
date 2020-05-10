@@ -16,5 +16,6 @@ def get_default_serial_agent_config():
     # overwrite training config
     config.batch_size = 50
     config.batch_length = 50
+    config.log_step = 100
 
     return config

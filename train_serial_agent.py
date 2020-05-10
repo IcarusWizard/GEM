@@ -39,16 +39,17 @@ if __name__ == '__main__':
     config['predictor_param'] = predictor_param
     config['controller_param'] = controller_param
     config['log_name'] = os.path.join(SerialLogDir, filename)
-    real_env = make_env(config)
+    test_env = make_env(config)
+    collect_env = make_env(config)
     datafolder = os.path.join(config['log_name'], 'trajs')
     create_dir(datafolder)
     callbacks = [
         lambda ep: save_episodes(datafolder, ep),
         buffer.add,
     ]
-    real_env = Collect(real_env, callbacks)
+    collect_env = Collect(collect_env, callbacks)
 
     # training
-    trainer = SerialAgentTrainer(world_model, controller, real_env, buffer, config)
+    trainer = SerialAgentTrainer(world_model, controller, test_env, collect_env, buffer, config)
     trainer.train()
     trainer.save(os.path.join(SerialDir, '{}.pt'.format(filename)))

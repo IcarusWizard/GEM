@@ -26,7 +26,7 @@ def world_model_rollout(world_model, controller, reset_obs=None, reset_state=Non
 
     return rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist
 
-def real_env_rollout(real_env, world_model, controller):
+def real_env_rollout(real_env, world_model, controller, action_func=lambda action_dist: action_dist.mode()):
     rollout_state = []
     rollout_obs = []
     rollout_action = []
@@ -47,7 +47,7 @@ def real_env_rollout(real_env, world_model, controller):
 
         while True:
             action_dist, value_dist = controller(state)
-            action = action_dist.mode()
+            action = action_func(action_dist)
             value = value_dist.mode()
 
             # step real env

@@ -9,10 +9,11 @@ from gem.distributions.utils import stack_normal
 from gem.controllers.utils import compute_lambda_return, world_model_rollout, real_env_rollout
 
 class SerialAgentTrainer:
-    def __init__(self, world_model, controller, real_env, buffer, config={}):
+    def __init__(self, world_model, controller, test_env, collect_env, buffer, config={}):
         self.world_model = world_model
         self.controller = controller
-        self.real_env = real_env
+        self.test_env = test_env
+        self.collect_env = collect_env
         self.buffer = buffer
         self.config = config
 
@@ -126,6 +127,7 @@ class SerialAgentTrainer:
     def log_step(self, step):
         obs_eval, info_eval = self.test_on_world_model()
         obs_eval_real, pre_obs_eval_real, info_eval_real = self.test_on_real_env()
+        obs_collect, pre_obs_collect, info_collect = self.collect_data()
 
         print('In Step {}'.format(step))
         print('-' * 15)
@@ -138,12 +140,21 @@ class SerialAgentTrainer:
         for k, v in info_eval_real.items():
             print('{0} is {1:{2}}'.format(k, v, '.2f'))
             self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
+        for k, v in info_collect.items():
+            print('{0} is {1:{2}}'.format(k, v, '.2f'))
+            self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
         
         self.writer.add_video('eval_world_model', torch.clamp(obs_eval.permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
             global_step=step, fps=self.config['fps'])
+
         obs_eval_real = torch.clamp(obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
         pre_obs_eval_real = torch.clamp(pre_obs_eval_real.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
         self.writer.add_video('eval_real', torch.cat([obs_eval_real, pre_obs_eval_real, (pre_obs_eval_real - obs_eval_real + 1) / 2], dim=4), 
+            global_step=step, fps=self.config['fps'])
+
+        obs_collect = torch.clamp(obs_collect.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
+        pre_obs_collect = torch.clamp(pre_obs_collect.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
+        self.writer.add_video('collection', torch.cat([obs_collect, pre_obs_collect, (pre_obs_collect - obs_collect + 1) / 2], dim=4), 
             global_step=step, fps=self.config['fps'])
 
         self.writer.flush()
@@ -155,7 +166,7 @@ class SerialAgentTrainer:
         return obs, action, reward    
 
     def test_on_world_model(self):
-        obs = self.buffer.sample_image(16)[0]
+        obs = self.buffer.sample_image(16)[0].to(self.device)
         with torch.no_grad():
             # rollout world model
             rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
@@ -178,7 +189,7 @@ class SerialAgentTrainer:
     def test_on_real_env(self):
         # rollout real world
         rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
-                rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(self.real_env, self.world_model, self.controller)
+                rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(self.test_env, self.world_model, self.controller)
 
         rollout_obs = torch.stack(rollout_obs)
         rollout_state = torch.stack(rollout_state)
@@ -189,6 +200,26 @@ class SerialAgentTrainer:
             "accumulate_real_reward_eval_real" : np.sum(rollout_reward),
             "mean_action_entropy_eval_real" : torch.mean(torch.stack(rollout_action_entropy)).item(),
             "mean_value_eval_real" : torch.mean(torch.stack(rollout_value)).item(),
+        }
+
+        return rollout_obs, rollout_predicted_obs, info
+
+    def collect_data(self):
+        # rollout real world
+        action_func = lambda action_dist: action_dist.sample()
+        rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
+                rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(
+                    self.collect_env, self.world_model, self.controller, action_func)
+
+        rollout_obs = torch.stack(rollout_obs)
+        rollout_state = torch.stack(rollout_state)
+        rollout_predicted_obs = self.world_model.render(rollout_state)
+
+        info = {
+            "accumulate_reward_collection" : torch.sum(torch.stack(rollout_predicted_reward)).item(),
+            "accumulate_real_reward_collection" : np.sum(rollout_reward),
+            "mean_action_entropy_collection" : torch.mean(torch.stack(rollout_action_entropy)).item(),
+            "mean_value_eval_collection" : torch.mean(torch.stack(rollout_value)).item(),
         }
 
         return rollout_obs, rollout_predicted_obs, info
