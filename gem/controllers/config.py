@@ -26,6 +26,8 @@ def get_default_controller_config():
     config.env = 'dmc_finger_spin'
     config.action_repeat = 2
     config.max_length = 1000
+    config.image_size = 64
+    config.image_channel = 3
 
     # buffer config
     config.use_buffer = False
@@ -39,7 +41,7 @@ def get_default_controller_config():
     config.preload = True
     config.gpu = '0'
     config.workers = 9999
-    config.steps = 100000
+    config.steps = 50000
     config.c_lr = 8e-5
     config.c_beta1 = 0.9
     config.c_beta2 = 0.999

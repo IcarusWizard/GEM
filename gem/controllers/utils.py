@@ -1,11 +1,15 @@
 import torch
 
-def world_model_rollout(world_model, controller, reset_obs, horizon=50, mode='train'):
+def world_model_rollout(world_model, controller, reset_obs=None, reset_state=None, horizon=15, mode='train'):
+    assert reset_obs is not None or reset_state is not None, "need to provide something to reset the world model"
     rollout_state = []
     rollout_action = []
     rollout_reward = []
 
-    state = world_model.reset(reset_obs)
+    if reset_obs is not None:
+        state = world_model.reset(reset_obs)
+    else:
+        state = world_model.reset_state(reset_state)
     for i in range(horizon):
         action_dist = controller.get_action_dist(state.detach())
         action = action_dist.sample() if mode == 'train' else action_dist.mode()

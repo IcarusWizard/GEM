@@ -71,7 +71,7 @@ class RSSM(torch.nn.Module):
             states.append(state)
 
         info = {}
-        prediction = {}
+        prediction = {"state" : torch.stack(states)}
         loss = 0
 
         kl_loss = get_kl(stack_normal(posterior_dists), stack_normal(prior_dists))

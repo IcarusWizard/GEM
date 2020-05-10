@@ -16,7 +16,7 @@ def get_default_predictor_config():
     config.decoder_hidden_layers = 2
     config.decoder_features = 256
     config.decoder_activation = 'elu'
-    config.action_mimic = True
+    config.action_mimic = False
     config.actor_mode = 'continuous'
 
     # training config

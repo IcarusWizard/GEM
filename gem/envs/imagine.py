@@ -49,6 +49,17 @@ class Imagine:
         else:
             return self.state
 
+    def reset_state(self, state):
+        self.state = state
+        return self.get_state()
+
+    def get_state(self):
+        if self.with_emb:
+            emb = self.predictor.emb_pre(state).mode()
+            return torch.cat([emb, self.state], dim=1)
+        else:
+            return self.state        
+
     def render(self, state):
         with_time = len(state.shape) == 3
         if with_time:

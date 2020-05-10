@@ -53,7 +53,7 @@ class RAR(torch.nn.Module):
             state = self.rnn_cell(torch.cat([_emb, _action], dim=1), state) # compute next state
 
         info = {}
-        prediction = {}
+        prediction = {"state" : torch.stack(states)}
         loss = 0
 
         states = torch.cat(states, dim=0).contiguous()
