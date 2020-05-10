@@ -2,11 +2,12 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from functools import partial
 from itertools import chain
 
 from gem.utils import nats2bits, select_gpus
 from gem.distributions.utils import stack_normal
-from gem.controllers.utils import compute_lambda_return, world_model_rollout, real_env_rollout
+from gem.controllers.utils import compute_lambda_return, world_model_rollout, real_env_rollout, get_explored_action
 
 class SerialAgentTrainer:
     def __init__(self, world_model, controller, test_env, collect_env, buffer, config={}):
@@ -206,7 +207,7 @@ class SerialAgentTrainer:
 
     def collect_data(self):
         # rollout real world
-        action_func = lambda action_dist: action_dist.sample()
+        action_func = partial(get_explored_action, explore_amount=self.config['explore_amount'])
         rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
                 rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(
                     self.collect_env, self.world_model, self.controller, action_func)

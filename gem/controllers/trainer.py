@@ -2,12 +2,13 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from itertools import chain
+from functools import partial
 from torch.utils.tensorboard import SummaryWriter
 
 from gem.distributions.utils import stack_normal
 from gem.utils import nats2bits, select_gpus, step_loader
 
-from .utils import world_model_rollout, real_env_rollout, compute_lambda_return
+from .utils import world_model_rollout, real_env_rollout, compute_lambda_return, get_explored_action
 
 class VGCtTrainer:
     def __init__(self, controller, world_model, test_env, collect_env=None, buffer=None, observation_loader=None, config={}):
@@ -179,7 +180,7 @@ class VGCtTrainer:
 
     def collect_data(self):
         # rollout real world
-        action_func = lambda action_dist: action_dist.sample()
+        action_func = partial(get_explored_action, explore_amount=self.config['explore_amount'])
         rollout_state, rollout_obs, rollout_action, rollout_action_entropy, rollout_reward, \
                 rollout_predicted_reward, rollout_value, rollout_value_dist = real_env_rollout(
                     self.collect_env, self.world_model, self.controller, action_func)

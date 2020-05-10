@@ -1,4 +1,7 @@
 import torch
+import random
+import numpy as np
+from gem.distributions import Onehot, BijectoredDistribution
 
 def world_model_rollout(world_model, controller, reset_obs=None, reset_state=None, horizon=15, mode='train'):
     assert reset_obs is not None or reset_state is not None, "need to provide something to reset the world model"
@@ -93,3 +96,19 @@ def compute_lambda_return(rewards, values, bootstrap=None, _gamma=0.99, _lambda=
         lambda_returns.append(last)
 
     return list(reversed(lambda_returns))
+
+def get_explored_action(action_dist, explore_amount=0.3):
+    if isinstance(action_dist, BijectoredDistribution):
+        # continuous action space
+        action = action_dist.sample()
+        action = torch.clamp(action + torch.randn_like(action) * explore_amount, -1, 1)
+    elif isinstance(action_dist, Onehot):
+        # discrete action space
+        action = action_dist.sample()
+        if random.random() < explore_amount:
+            action = torch.zeros_like(action)
+            action[np.arange(action.shape[0]), torch.randint(action.shape[1], (action.shape[0],))] = 1.0
+    else:
+        raise ValueError(f"Distribution type {type(action_dist)} is not support!")
+
+    return action

@@ -33,6 +33,7 @@ def get_default_controller_config():
     config.use_buffer = False
     config.prefill = 5
     config.buffer_size = 200
+    config.explore_amount = 0.3
 
     # training config
     config.seed = -1 
