@@ -2,10 +2,11 @@ import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from tabulate import tabulate
 from functools import partial
 from itertools import chain
 
-from gem.utils import nats2bits, select_gpus
+from gem.utils import select_gpus
 from gem.distributions.utils import stack_normal
 from gem.controllers.utils import compute_lambda_return, world_model_rollout, real_env_rollout, get_explored_action
 
@@ -130,20 +131,16 @@ class SerialAgentTrainer:
         obs_eval_real, pre_obs_eval_real, info_eval_real = self.test_on_real_env()
         obs_collect, pre_obs_collect, info_collect = self.collect_data()
 
+        info = self.last_train_info
+        info.update(info_eval)
+        info.update(info_eval_real)
+        info.update(info_collect)
+
         print('In Step {}'.format(step))
-        print('-' * 15)
-        for k, v in self.last_train_info.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
+        for k, v in info.items():
             self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
-        for k, v in info_eval.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
-        for k, v in info_eval_real.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
-        for k, v in info_collect.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('serial_agent/' + k, v, global_step=step)
+
+        print(tabulate(info.items(), numalign="right"))
         
         self.writer.add_video('eval_world_model', torch.clamp(obs_eval.permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
             global_step=step, fps=self.config['fps'])

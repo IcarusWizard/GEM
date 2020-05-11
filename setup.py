@@ -26,6 +26,7 @@ setup(
         'gym',
         'gym[atari]',
         'dm_control',
+        'tabulate',
     ],
     description="General Intelligent Machine based on World Model",
     author="Xingyuan Zhang",

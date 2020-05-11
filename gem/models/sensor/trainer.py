@@ -1,6 +1,7 @@
 import torch
 from gem.models.base import Trainer
 from itertools import chain
+from tabulate import tabulate
 
 from gem.utils import nats2bits
 
@@ -40,15 +41,13 @@ class VAETrainer(Trainer):
         print('In Step {}'.format(step))
         print('-' * 15)
         print('In training set:')
-        for k in self.last_train_info.keys():
-            print('{0} is {1:{2}} bits'.format(k, nats2bits(self.last_train_info[k]), '.2f'))
+        print(tabulate(self.last_train_info.items(), numalign="right"))
         print('In validation set:')
-        for k in val_info.keys():
-            print('{0} is {1:{2}} bits'.format(k, nats2bits(val_info[k]), '.2f'))
+        print(tabulate(val_info.items(), numalign="right"))
 
         for k in val_info.keys():
-            self.writer.add_scalars('sensor/' + k, {'train' : nats2bits(self.last_train_info[k]), 
-                                    'val' : nats2bits(val_info[k])}, global_step=step)
+            self.writer.add_scalars('sensor/' + k, {'train' : self.last_train_info[k], 
+                                    'val' : val_info[k]}, global_step=step)
         self.writer.add_scalar('sensor/grad_norm', self.last_train_info['sensor_grad_norm'], global_step=step)
         
         with torch.no_grad():

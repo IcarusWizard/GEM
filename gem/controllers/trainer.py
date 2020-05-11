@@ -1,12 +1,13 @@
 import torch
 import numpy as np
 from tqdm import tqdm
+from tabulate import tabulate
 from itertools import chain
 from functools import partial
 from torch.utils.tensorboard import SummaryWriter
 
 from gem.distributions.utils import stack_normal
-from gem.utils import nats2bits, select_gpus, step_loader
+from gem.utils import select_gpus, step_loader
 
 from .utils import world_model_rollout, real_env_rollout, compute_lambda_return, get_explored_action
 
@@ -106,17 +107,9 @@ class VGCtTrainer:
         obs_eval, info_eval = self.test_on_world_model()
         obs_eval_real, pre_obs_eval_real, info_eval_real = self.test_on_real_env()
 
-        print('In Step {}'.format(step))
-        print('-' * 15)
-        for k, v in self.last_train_info.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('controller/' + k, v, global_step=step)
-        for k, v in info_eval.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('controller/' + k, v, global_step=step)
-        for k, v in info_eval_real.items():
-            print('{0} is {1:{2}}'.format(k, v, '.2f'))
-            self.writer.add_scalar('controller/' + k, v, global_step=step)
+        info = self.last_train_info
+        info.update(info_eval)
+        info.update(info_eval_real)
         
         self.writer.add_video('eval_world_model', torch.clamp(obs_eval[:, :16].permute(1, 0, 2, 3, 4) + 0.5, 0, 1), 
             global_step=step, fps=self.config['fps'])
@@ -128,14 +121,19 @@ class VGCtTrainer:
 
         if self.collect_env is not None:
             obs_collect, pre_obs_collect, info_collect = self.collect_data()
-            for k, v in info_collect.items():
-                print('{0} is {1:{2}}'.format(k, v, '.2f'))
-                self.writer.add_scalar('controller/' + k, v, global_step=step)
+
+            info.update(info_collect)
 
             obs_collect = torch.clamp(obs_collect.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
             pre_obs_collect = torch.clamp(pre_obs_collect.permute(1, 0, 2, 3, 4) + 0.5, 0, 1)
             self.writer.add_video('collection', torch.cat([obs_collect, pre_obs_collect, (pre_obs_collect - obs_collect + 1) / 2], dim=4), 
                 global_step=step, fps=self.config['fps'])
+
+        print('In Step {}'.format(step))
+        for k, v in info.items():
+            self.writer.add_scalar('controller/' + k, v, global_step=step)
+
+        print(tabulate(info.items(), numalign="right"))
 
         self.writer.flush()
         

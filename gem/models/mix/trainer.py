@@ -1,9 +1,10 @@
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from tabulate import tabulate
 from itertools import chain
 
-from gem.utils import nats2bits, select_gpus
+from gem.utils import select_gpus
 
 class MixTrainer:
     def __init__(self, sensor, predictor, train_loader, val_loader=None, test_loader=None, config={}):
@@ -79,15 +80,13 @@ class MixTrainer:
         print('In Step {}'.format(step))
         print('-' * 15)
         print('In training set:')
-        for k in self.last_train_info.keys():
-            print('{0} is {1:{2}} bits'.format(k, nats2bits(self.last_train_info[k]), '.2f'))
+        print(tabulate(self.last_train_info.items(), numalign="right"))
         print('In validation set:')
-        for k in val_info.keys():
-            print('{0} is {1:{2}} bits'.format(k, nats2bits(val_info[k]), '.2f'))
+        print(tabulate(val_info.items(), numalign="right"))
 
         for k in val_info:
-            self.writer.add_scalars('world_model/' + k, {'train' : nats2bits(self.last_train_info[k]), 
-                                    'val' : nats2bits(val_info[k])}, global_step=step)
+            self.writer.add_scalars('world_model/' + k, {'train' : self.last_train_info[k], 
+                                    'val' : val_info[k]}, global_step=step)
         self.writer.add_scalar('world_model/grad_norm', self.last_train_info['model_grad_norm'], global_step=step)
 
         with torch.no_grad():
