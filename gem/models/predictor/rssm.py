@@ -75,6 +75,7 @@ class RSSM(torch.nn.Module):
         loss = 0
 
         kl_loss = get_kl(stack_normal(posterior_dists), stack_normal(prior_dists))
+        prediction['kl'] = kl_loss
         kl_loss = torch.sum(kl_loss) / (T * B)
         info['kl_loss'] = kl_loss.item()
         loss += kl_loss if kl_loss > self.free_nats else kl_loss.detach()

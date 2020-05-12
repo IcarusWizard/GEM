@@ -99,3 +99,13 @@ def parse_args(config={}):
         parser.add_argument(f'--{k}', type=get_config_type(v), default=v, help=f'default : {v}')
     args = parser.parse_args()
     return args
+
+def tsplot(ax, data, **kw):
+    """plot with std shade"""
+    x = np.arange(data.shape[1])
+    est = np.mean(data, axis=0)
+    sd = np.std(data, axis=0)
+    cis = (est - sd, est + sd)
+    ax.fill_between(x, cis[0], cis[1], alpha=0.2, **kw)
+    ax.plot(x, est, **kw)
+    ax.margins(x=0)
