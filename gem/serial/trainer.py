@@ -83,10 +83,12 @@ class SerialAgentTrainer:
                                             _gamma=self.config['gamma'], _lambda=self.config['lambda'])
 
         lambda_returns = torch.stack(lambda_returns)
-        actor_loss = - torch.mean(lambda_returns)
+        discont = torch.cat([torch.ones_like(lambda_returns[:1]), self.config['gamma'] * torch.ones_like(lambda_returns[:-1])], dim=0)
+        discont = torch.cumprod(discont, dim=0)
+        actor_loss = - torch.mean(discont * lambda_returns)
         
         values_dist = stack_normal(rollout_value_dist[:-1])
-        critic_loss = - torch.mean(values_dist.log_prob(lambda_returns.detach()))
+        critic_loss = - torch.mean(discont * values_dist.log_prob(lambda_returns.detach()))
 
         info.update({
             "actor_loss" : actor_loss.item(),
