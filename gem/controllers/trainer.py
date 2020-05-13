@@ -136,8 +136,6 @@ class VGCtTrainer:
             self.writer.add_scalar('controller/' + k, v, global_step=step)
 
         print(tabulate(info.items(), numalign="right"))
-
-        self.writer.flush()
         
     def test_on_world_model(self):
         obs = self.parse_batch(next(self.observation_iter))

@@ -138,8 +138,6 @@ class MixTrainer:
                     torch.cat([obs + 0.5, generated_video + 0.5, (generated_video - obs + 1) / 2], dim=0), 
                     global_step=step, fps=self.config['fps'])
 
-        self.writer.flush()
-
     def parse_batch(self, batch):
         obs = batch['image'].permute(1, 0, 2, 3, 4).to(self.device).contiguous()
         action = batch['action'].permute(1, 0, 2).to(self.device).contiguous()

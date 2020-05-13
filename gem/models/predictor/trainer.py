@@ -99,8 +99,6 @@ class PredictorTrainer(Trainer):
                 self.writer.add_video('prior_video_fake_action', 
                     generated_video + 0.5, global_step=step, fps=self.config['fps'])
 
-        self.writer.flush()
-
     def parse_batch(self, batch):
         if 'emb' not in batch.keys():
             images = batch['image'].to(self.device)
