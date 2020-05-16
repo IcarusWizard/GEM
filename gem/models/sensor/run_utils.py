@@ -2,6 +2,7 @@ import importlib
 
 def config_sensor(config, sensor_param):
     sensor_param['network_type'] = config['network_type']
+    sensor_param['kl_scale'] = config['kl_scale']
 
     if config['network_type'] == 'conv':
         sensor_param['config'] = {

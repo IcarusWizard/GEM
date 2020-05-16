@@ -12,6 +12,7 @@ def get_default_sensor_config():
     config.sensor = 'VAE'
     config.latent_dim = 64
     config.free_nats = 3.0
+    config.kl_scale = 1.0
     config.output_type = 'fix_std'
     config.network_type = 'conv'
 

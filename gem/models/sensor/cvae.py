@@ -23,10 +23,11 @@ class CVAE(torch.nn.Module):
             config : dict, parameters for constructe encoder and decoder
             output_type : str, type of the distribution p(x|z), choose from fix_std(std=1) and gauss, default: gauss
     """
-    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, network_type='conv', config={}, output_type='gauss'):
+    def __init__(self, c=3, h=32, w=32, latent_dim=2, free_nats=0, kl_scale=1.0, network_type='conv', config={}, output_type='gauss'):
         super().__init__()
         self.latent_dim = latent_dim
         self.free_nats = free_nats
+        self.kl_scale = kl_scale
         self.output_type = output_type
         self.input_dim = c * h * w
 
@@ -67,7 +68,7 @@ class CVAE(torch.nn.Module):
         next_posterior = self.encode(output_dist.mode(), output_dist=True)
         consistent_loss = torch.mean(torch.sum(get_kl(next_posterior, posterior), dim=1))
         
-        loss = kl + reconstruction_loss + consistent_loss
+        loss = kl * self.kl_scale + reconstruction_loss + consistent_loss
         
         return loss, {
             "NELBO" : loss.item(),
