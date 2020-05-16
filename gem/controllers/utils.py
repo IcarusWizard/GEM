@@ -25,7 +25,7 @@ def world_model_rollout(world_model, controller, reset_obs=None, reset_state=Non
         state = next_state
 
     rollout_value_dist = [controller.get_critic_dist(state) for state in rollout_state]
-    rollout_value = [dist.mode() for dist in rollout_value_dist]
+    rollout_value = [controller.get_critic_target(state) for state in rollout_state]
 
     return rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist
 

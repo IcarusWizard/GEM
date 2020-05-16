@@ -49,10 +49,14 @@ class VGCtTrainer:
     
     def train(self):
         for step in tqdm(range(self.config['steps'])):
+            if step % self.config['update_step'] == 0:
+                self.controller.update_target()
+
             self.train_step()
 
             if step % self.config['log_step'] == 0:
                 self.log_step(step)
+
         self.log_step(self.config['steps'])
 
     def parse_batch(self, batch):

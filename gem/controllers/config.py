@@ -47,6 +47,7 @@ def get_default_controller_config():
     config.c_beta1 = 0.9
     config.c_beta2 = 0.999
     config.c_grad_clip = 100.0
+    config.update_step = 100
 
     # log config
     config.log_step = 200

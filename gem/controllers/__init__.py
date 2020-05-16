@@ -1,1 +1,1 @@
-from .vgc import VGC, VGCS
+from .vgc import VGC
