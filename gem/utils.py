@@ -4,6 +4,7 @@ import random
 import numpy as np
 import torch
 import argparse
+import matplotlib.pyplot as plt
 
 LOG2PI = 0.5 * np.log(2 * np.pi)
 
@@ -109,3 +110,14 @@ def tsplot(ax, data, **kw):
     ax.fill_between(x, cis[0], cis[1], alpha=0.2, **kw)
     ax.plot(x, est, **kw)
     ax.margins(x=0)
+
+def show_grad(x, net):
+    out = net(x)
+    if not isinstance(out, torch.Tensor):
+        out = out.mode()
+    out.backward(torch.ones_like(out))
+    img = x.grad[0].permute(1, 2, 0).numpy()
+    img = np.abs(img)
+    img = img / np.max(img)
+    plt.imshow(img)
+    plt.show()
