@@ -80,7 +80,7 @@ class RSSM(torch.nn.Module):
         prediction['kl'] = kl_loss
         kl_loss = torch.sum(kl_loss) / (T * B)
         info['kl_loss'] = kl_loss.item()
-        if kl_loss > self.free_nats:
+        if kl_loss < self.free_nats:
             kl_loss = kl_loss.detach()
         loss += kl_loss * self.kl_scale
 
