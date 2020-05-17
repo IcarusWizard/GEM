@@ -40,4 +40,4 @@ class Onehot:
     
     def entropy(self):
         entropy = self.prior.entropy()
-        return torch.sum(entropy, dim=tuple(range(1, len(entropy.shape)))) if self.with_batch else torch.sum(entropy)
+        return entropy
