@@ -26,6 +26,7 @@ if __name__ == '__main__':
         last_config['start_step'] = last_config['steps']
         last_config['steps'] += config['steps']
         last_config['model_checkpoint'] = config['model_checkpoint']
+        last_config['gpu'] = config['gpu']
 
         # setup random seed
         seed = args.seed if not args.seed == -1 else np.random.randint(0, 100000)
