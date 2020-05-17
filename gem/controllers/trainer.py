@@ -69,17 +69,21 @@ class VGCtTrainer:
         obs = self.parse_batch(next(self.observation_iter))
 
         # rollout world model
-        rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
+        rollout_state, rollout_action_dist, rollout_reward, rollout_value, rollout_value_dist = \
             world_model_rollout(self.world_model, self.controller, reset_obs=obs, horizon=self.config['horizon']+1)
 
         # compute lambda return
         lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
                                             _gamma=self.config['gamma'], _lambda=self.config['lambda'])
 
+        # compute entropy
+        rollout_entropy = [dist.entropy() for dist in rollout_action_dist[:-1]]
+        rollout_entropy = torch.stack(rollout_entropy).unsqueeze(dim=-1)
+
         lambda_returns = torch.stack(lambda_returns)
         discont = torch.cat([torch.ones_like(lambda_returns[:1]), self.config['gamma'] * torch.ones_like(lambda_returns[:-1])], dim=0)
         discont = torch.cumprod(discont, dim=0)
-        actor_loss = - torch.mean(discont * lambda_returns)
+        actor_loss = - torch.mean(discont * (lambda_returns + self.config['entropy_scale'] * rollout_entropy))
         
         values_dist = stack_normal(rollout_value_dist[:-1])
         critic_loss = - torch.mean(discont * values_dist.log_prob(lambda_returns.detach()))
@@ -88,6 +92,7 @@ class VGCtTrainer:
             "actor_loss" : actor_loss.item(),
             "critic_loss" : critic_loss.item(),
             "mean_lambda_return_train" : torch.mean(lambda_returns.detach()).item(),
+            "mean_entropy_train" : torch.mean(rollout_entropy).item(),
             "mean_value_train" : torch.mean(torch.stack(rollout_value).detach()).item(),
             "accumulate_reward_train" : torch.sum(torch.stack(rollout_reward).detach()).item() / obs.shape[0],
         }
@@ -145,7 +150,7 @@ class VGCtTrainer:
         obs = self.parse_batch(next(self.observation_iter))
         with torch.no_grad():
             # rollout world model
-            rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
+            rollout_state, rollout_action_dist, rollout_reward, rollout_value, rollout_value_dist = \
                 world_model_rollout(self.world_model, self.controller, reset_obs=obs, horizon=self.config['horizon']+1, mode='test')
 
             lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 

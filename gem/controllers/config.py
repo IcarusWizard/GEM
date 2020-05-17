@@ -18,6 +18,7 @@ def get_default_controller_config():
     config.controller_hidden_layers = 3
     config.controller_features = 256
     config.actor_mode = 'continuous'
+    config.entropy_scale = 0.0
     config.gamma = 0.99
     config['lambda'] = 0.95
     config.horizon = 15

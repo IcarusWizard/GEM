@@ -6,7 +6,7 @@ from gem.distributions import Onehot, BijectoredDistribution
 def world_model_rollout(world_model, controller, reset_obs=None, reset_state=None, horizon=15, mode='train'):
     assert reset_obs is not None or reset_state is not None, "need to provide something to reset the world model"
     rollout_state = []
-    rollout_action = []
+    rollout_action_dist = []
     rollout_reward = []
 
     if reset_obs is not None:
@@ -19,7 +19,7 @@ def world_model_rollout(world_model, controller, reset_obs=None, reset_state=Non
 
         next_state, reward, done, info = world_model.step(action)
         rollout_state.append(state)
-        rollout_action.append(action)
+        rollout_action_dist.append(action_dist)
         rollout_reward.append(reward)
 
         state = next_state
@@ -27,7 +27,7 @@ def world_model_rollout(world_model, controller, reset_obs=None, reset_state=Non
     rollout_value_dist = [controller.get_critic_dist(state) for state in rollout_state]
     rollout_value = [controller.get_critic_target(state) for state in rollout_state]
 
-    return rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist
+    return rollout_state, rollout_action_dist, rollout_reward, rollout_value, rollout_value_dist
 
 def real_env_rollout(real_env, world_model, controller, action_func=lambda action_dist: action_dist.mode()):
     rollout_state = []
