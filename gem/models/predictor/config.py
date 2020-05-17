@@ -8,6 +8,7 @@ def get_default_predictor_config():
     config = AttrDict()
     
     # base config
+    config.predictor_checkpoint = ''
     config.predictor = 'RSSM'
     config.sensor_checkpoint = 'VAE_dmc_finger_spin'
     config.state_hidden_dim = 256

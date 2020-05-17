@@ -88,8 +88,7 @@ class VAETrainer(Trainer):
             "seed" : self.config['seed'],
         }, filename)
 
-    def restore(self, filename):
-        checkpoint = torch.load(filename, map_location='cpu')
+    def restore(self, checkpoint):
         self.sensor.load_state_dict(checkpoint['sensor_state_dict'])
         self.sensor = self.sensor.to(self.device) # make sure model on right device
         self.optim.load_state_dict(checkpoint['optimizer_state_dict'])

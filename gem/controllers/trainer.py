@@ -210,8 +210,7 @@ class VGCtTrainer:
             "seed" : self.config['seed'],
         }, filename)
 
-    def restore(self, filename):
-        checkpoint = torch.load(filename, map_location='cpu')
+    def restore(self, checkpoint):
         self.controller.load_state_dict(checkpoint['controller_state_dict'])
         self.controller = self.controller.to(self.device) # make sure model on right device
         self.actor_optim.load_state_dict(checkpoint['actor_optimizer_state_dict'])

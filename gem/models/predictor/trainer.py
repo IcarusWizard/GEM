@@ -144,8 +144,7 @@ class PredictorTrainer(Trainer):
             "seed" : self.config['seed'],
         }, filename)
 
-    def restore(self, filename):
-        checkpoint = torch.load(filename, map_location='cpu')
+    def restore(self, checkpoint):
         self.predictor.load_state_dict(checkpoint['predictor_state_dict'])
         self.predictor = self.predictor.to(self.device) # make sure model on right device
         self.optim.load_state_dict(checkpoint['optimizer_state_dict'])

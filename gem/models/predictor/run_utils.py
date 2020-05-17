@@ -31,7 +31,7 @@ def config_predictor(config):
 
     return model, predictor_param, filename
 
-def get_predictor_by_checkpoint(checkpoint):
+def get_predictor_by_checkpoint(checkpoint, eval_mode=True):
     state_dict = checkpoint['predictor_state_dict']
     model_param = checkpoint['predictor_parameters']
     name = checkpoint['config']['predictor']
@@ -41,6 +41,7 @@ def get_predictor_by_checkpoint(checkpoint):
     model = model_class(**model_param)
 
     model.load_state_dict(state_dict)
-    model.eval()
+    if eval_mode:
+        model.eval()
 
     return model

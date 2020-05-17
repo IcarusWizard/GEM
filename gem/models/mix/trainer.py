@@ -4,40 +4,21 @@ from tqdm import tqdm
 from tabulate import tabulate
 from itertools import chain
 
+from ..base import Trainer
 from gem.utils import select_gpus
 
-class MixTrainer:
+class MixTrainer(Trainer):
     def __init__(self, sensor, predictor, train_loader, val_loader=None, test_loader=None, config={}):
+        super().__init__(train_loader, val_loader, test_loader, config)
         self.sensor = sensor
         self.predictor = predictor
-        self.train_loader = train_loader
-        self.val_loader = val_loader
-        self.test_loader = test_loader
-        self.config = config
-
-        # config gpus
-        select_gpus(self.config['gpu']) 
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         self.predictor = self.predictor.to(self.device)
         self.sensor = self.sensor.to(self.device)
 
-        # create log writer
-        self.writer = SummaryWriter(config['log_name'])
-
-        self.train_iter = iter(self.train_loader) # used in training
-
         # config optimizer
         self.optim = torch.optim.Adam(chain(self.sensor.parameters(), self.predictor.parameters()), lr=self.config['m_lr'], 
                                       betas=(self.config['m_beta1'], self.config['m_beta2']))
-
-    def train(self):
-        for step in tqdm(range(self.config['steps'])):
-            self.train_step()
-
-            if step % self.config['log_step'] == 0:
-                self.log_step(step)
-        self.log_step(self.config['steps'])
 
     def get_loss_info(self, batch):
         obs, action, reward = self.parse_batch(batch)
@@ -177,8 +158,7 @@ class MixTrainer:
             "seed" : self.config['seed'],
         }, filename)
 
-    def restore(self, filename):
-        checkpoint = torch.load(filename, map_location='cpu')
+    def restore(self, checkpoint):
         self.sensor.load_state_dict(checkpoint['sensor_state_dict'])
         self.predictor.load_state_dict(checkpoint['predictor_state_dict'])
         self.sensor = self.sensor.to(self.device) # make sure model on right device

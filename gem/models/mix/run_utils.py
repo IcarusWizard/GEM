@@ -20,8 +20,8 @@ def config_world_model(config, dataset_config):
 
     return sensor, predictor, sensor_param, predictor_param, filename
 
-def get_world_model_by_checkpoint(checkpoint):
-    sensor = get_sensor_by_checkpoint(checkpoint)
-    predictor = get_predictor_by_checkpoint(checkpoint)
+def get_world_model_by_checkpoint(checkpoint, eval_mode=True):
+    sensor = get_sensor_by_checkpoint(checkpoint, eval_mode=eval_mode)
+    predictor = get_predictor_by_checkpoint(checkpoint, eval_mode=eval_mode)
 
     return sensor, predictor

@@ -8,6 +8,7 @@ def get_default_sensor_config():
     config = AttrDict()
     
     # base config for sensor model
+    config.sensor_checkpoint = ''
     config.dataset = 'dmc_finger_spin'
     config.sensor = 'VAE'
     config.latent_dim = 64

@@ -22,7 +22,7 @@ def config_controller(config):
 
     return model, model_param, filename
 
-def get_controller_by_checkpoint(checkpoint):
+def get_controller_by_checkpoint(checkpoint, eval_mode=True):
     state_dict = checkpoint['controller_state_dict']
     model_param = checkpoint['controller_parameters']
     name = checkpoint['config']['controller']
@@ -32,6 +32,7 @@ def get_controller_by_checkpoint(checkpoint):
     model = model_class(**model_param)
 
     model.load_state_dict(state_dict)
-    model.eval()
+    if eval_mode:
+        model.eval()
 
     return model

@@ -44,7 +44,7 @@ class SerialAgentTrainer:
                                              betas=(self.config['c_beta1'], self.config['c_beta2']))
 
     def train(self):
-        for step in tqdm(range(self.config['steps'])):
+        for step in tqdm(range(self.config['start_step'], self.config['steps'])):
             if step % self.config['update_step'] == 0:
                 self.controller.update_target()
 
@@ -54,6 +54,7 @@ class SerialAgentTrainer:
                 self.log_step(step)
 
         self.log_step(self.config['steps'])
+        self.writer.flush()
 
     def get_loss_info(self, batch):
         obs, action, reward = self.parse_batch(batch)
@@ -241,8 +242,7 @@ class SerialAgentTrainer:
             "seed" : self.config['seed'],
         }, filename)
 
-    def restore(self, filename):
-        checkpoint = torch.load(filename, map_location='cpu')
+    def restore(self, checkpoint):
         self.sensor.load_state_dict(checkpoint['sensor_state_dict'])
         self.predictor.load_state_dict(checkpoint['predictor_state_dict'])
         self.controller.load_state_dict(checkpoint['controller_state_dict'])

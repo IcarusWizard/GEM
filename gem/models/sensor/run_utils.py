@@ -54,7 +54,7 @@ def config_sensor(config, sensor_param):
 
     return model, sensor_param, filename
 
-def get_sensor_by_checkpoint(checkpoint):
+def get_sensor_by_checkpoint(checkpoint, eval_mode=True):
     state_dict = checkpoint['sensor_state_dict']
     sensor_param = checkpoint['sensor_parameters']
     name = checkpoint['config']['sensor']
@@ -64,6 +64,7 @@ def get_sensor_by_checkpoint(checkpoint):
     model = model_class(**sensor_param)
 
     model.load_state_dict(state_dict)
-    model.eval()
+    if eval_mode:
+        model.eval()
 
     return model

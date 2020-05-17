@@ -26,9 +26,9 @@ def config_serial_agent(config):
 
     return world_model, controller, sensor_param, predictor_param, controller_param, filename
 
-def get_serial_agent_by_checkpoint(checkpoint):
-    sensor = get_sensor_by_checkpoint(checkpoint)
-    predictor = get_predictor_by_checkpoint(checkpoint)
-    controller = get_controller_by_checkpoint(checkpoint)
+def get_serial_agent_by_checkpoint(checkpoint, eval_mode=True):
+    sensor = get_sensor_by_checkpoint(checkpoint, eval_mode=eval_mode)
+    predictor = get_predictor_by_checkpoint(checkpoint, eval_mode=eval_mode)
+    controller = get_controller_by_checkpoint(checkpoint, eval_mode=eval_mode)
 
     return sensor, predictor, controller

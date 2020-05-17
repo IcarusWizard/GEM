@@ -33,12 +33,13 @@ class Trainer(object):
         self.train_iter = step_loader(self.train_loader) # used in training
 
     def train(self):
-        for step in tqdm(range(self.config['steps'])):
+        for step in tqdm(range(self.config['start_step'], self.config['steps'])):
             self.train_step()
 
             if step % self.config['log_step'] == 0:
                 self.log_step(step)
         self.log_step(self.config['steps'])
+        self.writer.flush()
 
     def train_step(self):
         """

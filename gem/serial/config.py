@@ -7,6 +7,8 @@ SerialDir = os.path.join('checkpoint', 'serial_agent')
 def get_default_serial_agent_config():
     config = AttrDict()
 
+    config.serial_agent_checkpoint = ''
+
     from gem.models.mix.config import get_default_world_model_config
     from gem.controllers.config import get_default_controller_config
 
