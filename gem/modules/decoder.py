@@ -2,7 +2,7 @@ import torch
 from torch.functional import F
 import numpy as np
 
-from .base import MLP, Flatten, Unflatten, ResNet, ResBlock
+from .base import MLP, Flatten, Unflatten, ResNet, ResBlock, ACTIVATION_MAP
 from functools import partial
 
 from gem.distributions import Normal, Bernoulli, Onehot, TanhBijector, BijectoredDistribution
@@ -32,16 +32,17 @@ class MLPDecoder(torch.nn.Module):
 
 class ConvDecoder(torch.nn.Module):
     def __init__(self, output_c, h, w, latent_dim, conv_features, down_sampling, res_layers, mlp_features, mlp_layers, batchnorm,
-                 dist_type='gauss'):
+                 activation='relu', dist_type='gauss'):
         super().__init__()
         self.dist_type = dist_type
+        activation_fn = ACTIVATION_MAP[activation]
 
         res_layers = list(reversed(res_layers))
         
         feature_shape = (conv_features, h // (2 ** down_sampling), w // (2 ** down_sampling))
 
         decoder_list = [
-            MLP(latent_dim, np.prod(feature_shape), mlp_features, mlp_layers, 'leakyrelu'),
+            MLP(latent_dim, np.prod(feature_shape), mlp_features, mlp_layers, activation),
             Unflatten(feature_shape),
         ]
 
@@ -50,7 +51,7 @@ class ConvDecoder(torch.nn.Module):
             for j in range(res_layers[i]):
                 decoder_list.append(ResBlock(conv_features, batchnorm))
             decoder_list.append(torch.nn.ConvTranspose2d(conv_features, conv_features // 2, 4, 2, padding=1))
-            decoder_list.append(torch.nn.ReLU(inplace=True))
+            decoder_list.append(activation_fn())
             conv_features //= 2
 
         _output_c = 2 * output_c if self.dist_type == 'gauss' else output_c
@@ -73,8 +74,10 @@ class ConvDecoder(torch.nn.Module):
             raise ValueError(f"distribution type {self.dist_type} is not suppoted!") 
 
 class FullConvDecoder(torch.nn.Module):
-    def __init__(self, input_c, h, w, output_c, conv_features, down_sampling, res_layers, batchnorm):
+    def __init__(self, input_c, h, w, output_c, conv_features, down_sampling, res_layers, batchnorm, activation='relu'):
         super().__init__()
+        activation_fn = ACTIVATION_MAP[activation]
+
         res_layers = list(reversed(res_layers))
 
         decoder_list = [
@@ -86,7 +89,7 @@ class FullConvDecoder(torch.nn.Module):
             for j in range(res_layers[i]):
                 decoder_list.append(ResBlock(conv_features, batchnorm))
             decoder_list.append(torch.nn.ConvTranspose2d(conv_features, conv_features // 2, 4, 2, padding=1))
-            decoder_list.append(torch.nn.ReLU(inplace=True))
+            decoder_list.append(activation_fn())
             conv_features //= 2
 
         _output_c = 2 * output_c if self.dist_type == 'gauss' else output_c

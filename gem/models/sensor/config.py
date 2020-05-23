@@ -26,6 +26,7 @@ def get_default_sensor_config():
     config.down_sampling = 4
     config.res_layers = [0]
     config.use_batchnorm = False
+    config.conv_activation = 'relu'
 
     # flow config
     config.flow_features = 256

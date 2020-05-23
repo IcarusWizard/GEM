@@ -7,6 +7,7 @@ def config_sensor(config, sensor_param):
     if config['network_type'] == 'conv':
         sensor_param['config'] = {
             "conv_features" : config['conv_features'],
+            "activation" : config['conv_activation'],
             "down_sampling" : config['down_sampling'],
             "batchnorm" : config['use_batchnorm'],
             "mlp_features" : config['sensor_features'],
