@@ -87,17 +87,17 @@ class FullConvEncoder(torch.nn.Module):
     def __init__(self, input_c, h, w, output_c, conv_features, down_sampling, res_layers, batchnorm,
                  activation='relu', dist_type='gauss', min_std=0.01, flow_config={}):
         super().__init__()
-        activation = ACTIVATION_MAP[activation]
+        activation_fn = ACTIVATION_MAP[activation]
         
         conv_features = conv_features // (2 ** down_sampling)
         encoder_list = [
             torch.nn.Conv2d(input_c, conv_features, 3, 1, padding=1),
-            torch.nn.ReLU(inplace=True)
+            activation_fn()
         ]
 
         for i in range(down_sampling):
             encoder_list.append(torch.nn.Conv2d(conv_features, conv_features * 2, 3, 2, padding=1))
-            encoder_list.append(torch.nn.ReLU(inplace=True))
+            encoder_list.append(activation_fn())
             conv_features *= 2
             for j in range(res_layers[i]):
                 encoder_list.append(ResBlock(conv_features, batchnorm))
