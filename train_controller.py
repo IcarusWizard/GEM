@@ -7,7 +7,7 @@ from tqdm import tqdm
 from gem.controllers.run_utils import config_controller
 from gem.controllers.config import get_default_controller_config, ControllerDir, ControllerLogDir
 from gem.data import load_sensor_dataset
-from gem.envs.utils import make_imagine_env_from_predictor, make_imagine_env_from_model, make_env, get_buffer
+from gem.envs.utils import make_imagine_env_from_predictor, make_imagine_env_from_model, make_imagine_env_from_serial_agent, make_env, get_buffer
 from gem.envs.wrapper import Collect
 from gem.utils import setup_seed, create_dir, parse_args
 
@@ -25,7 +25,9 @@ if __name__ == '__main__':
     print('using seed {}'.format(seed))
     
     # get environment
-    if len(config['model_checkpoint']) > 0:
+    if len(config['serial_agent_checkpoint']) > 0:
+        world_model = make_imagine_env_from_serial_agent(config['serial_agent_checkpoint'], with_emb=config['with_emb'])
+    elif len(config['model_checkpoint']) > 0:
         world_model = make_imagine_env_from_model(config['model_checkpoint'], with_emb=config['with_emb'])
     else:
         world_model = make_imagine_env_from_predictor(config['predictor_checkpoint'], with_emb=config['with_emb'])

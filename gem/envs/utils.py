@@ -59,6 +59,16 @@ def make_imagine_env_from_model(model_checkpoint_file, with_emb=True):
     predictor.requires_grad_(False)
     return Imagine(sensor, predictor, with_emb=with_emb)
 
+def make_imagine_env_from_serial_agent(serial_agent_checkpoint_file, with_emb=True):
+    from .imagine import Imagine
+    from gem.serial.run_utils import get_serial_agent_by_checkpoint
+    from gem.serial.config import SerialDir
+    serial_agent_checkpoint = torch.load(os.path.join(SerialDir, serial_agent_checkpoint_file + '.pt'), map_location='cpu')
+    sensor, predictor, _ = get_serial_agent_by_checkpoint(serial_agent_checkpoint)
+    sensor.requires_grad_(False)
+    predictor.requires_grad_(False)
+    return Imagine(sensor, predictor, with_emb=with_emb)
+
 def get_buffer(config):
     from gem.data.buffer import Buffer
     from .wrapper import Collect

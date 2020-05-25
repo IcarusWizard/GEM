@@ -8,6 +8,7 @@ def get_default_controller_config():
     config = AttrDict()
 
     # world model config
+    config.serial_agent_checkpoint = ''
     config.model_checkpoint = ''
     config.predictor_checkpoint = 'RSSM_VAE_dmc_finger_spin'
     config.dataset = 'dmc_finger_spin'
