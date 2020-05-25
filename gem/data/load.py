@@ -118,7 +118,32 @@ def load_env_dataset_seq(name, horizon, fix_start, preload):
     }
 
     return (trainset, valset, testset, config)
-    
+
+def load_serial_agent_dataset(serial_agent_checkpoint, config=None):
+    from gem.serial.config import SerialDir
+    agent_checkpoint = torch.load(os.path.join(SerialDir, serial_agent_checkpoint + '.pt'), map_location='cpu')
+    datafolder = os.path.join(agent_checkpoint['config']['log_name'], 'trajs')
+
+    if config is None:
+        config = agent_checkpoint['config']
+
+    if config['preload']:
+        wrapper = multiple_wrappers([
+            Preload,
+            partial(Split, horizon=config['batch_length'], fix_start=config['fix_start']),
+            ToTensor,
+        ])
+    else:
+        wrapper = multiple_wrappers([
+            partial(Split, horizon=config['batch_length'], fix_start=config['fix_start']),
+            ToTensor,
+        ]) 
+
+    dataset = wrapper(SequenceDataset(datafolder))
+    isampler = InfiniteSampler(dataset)
+    observation_loader = torch.utils.data.DataLoader(dataset, batch_size=config['batch_size'], sampler=isampler, 
+                                                     num_workers=os.cpu_count(), pin_memory=True)
+    return observation_loader
 
 class InfiniteSampler(torch.utils.data.Sampler):
     def __init__(self, data_source):

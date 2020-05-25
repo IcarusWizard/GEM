@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from gem.controllers.run_utils import config_controller
 from gem.controllers.config import get_default_controller_config, ControllerDir, ControllerLogDir
-from gem.data import load_predictor_dataset
+from gem.data import load_predictor_dataset, load_serial_agent_dataset
 from gem.envs.utils import make_imagine_env_from_predictor, make_imagine_env_from_model, make_imagine_env_from_serial_agent, make_env, get_buffer
 from gem.envs.wrapper import Collect
 from gem.utils import setup_seed, create_dir, parse_args
@@ -44,7 +44,10 @@ if __name__ == '__main__':
         collect_env = Collect(collect_env, [buffer.add])
     else:
         # config dataset
-        _, observation_loader, _, _ = load_predictor_dataset(config)
+        if len(config['serial_agent_checkpoint']) > 0:
+            observation_loader = load_serial_agent_dataset(config['serial_agent_checkpoint'], config)
+        else:
+            _, observation_loader, _, _ = load_predictor_dataset(config)
         buffer = None
         collect_env = None
 
