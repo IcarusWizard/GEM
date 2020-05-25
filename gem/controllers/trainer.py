@@ -36,7 +36,7 @@ class VGCtTrainer:
 
         if self.buffer is not None:
             from gem.envs.wrapper import Collect
-            self.observation_iter = self.buffer.generator(self.config['batch_size'])
+            self.observation_iter = self.buffer.generator(self.config['batch_size'], self.config['batch_length'])
         else:
             self.observation_iter = step_loader(self.observation_loader) # used in training
 
@@ -60,17 +60,27 @@ class VGCtTrainer:
         self.log_step(self.config['steps'])
 
     def parse_batch(self, batch):
-        batch = batch[0].to(self.device)
-        if len(batch.shape) == 5:
-            batch = batch.view(-1, *batch.shape[2:])    
-        return batch    
+        obs = batch['image'].permute(1, 0, 2, 3, 4).to(self.device).contiguous()
+        action = batch['action'].permute(1, 0, 2).to(self.device).contiguous()
+        reward = batch['reward'].permute(1, 0).unsqueeze(dim=-1).to(self.device).contiguous() 
+
+        T, B = obs.shape[:2]
+        obs = obs.view(T * B, *obs.shape[2:])
+        emb = self.world_model.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
+
+        predictor_loss, prediction, info = self.world_model.predictor(emb, action, reward, use_emb_loss=False)
+
+        states = prediction['state'].detach()
+        states = states.view(-1, states.shape[-1])
+
+        return states   
 
     def train_step(self):
-        obs = self.parse_batch(next(self.observation_iter))
+        states = self.parse_batch(next(self.observation_iter))
 
         # rollout world model
         rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
-            world_model_rollout(self.world_model, self.controller, reset_obs=obs, horizon=self.config['horizon']+1)
+            world_model_rollout(self.world_model, self.controller, reset_state=states, horizon=self.config['horizon']+1)
 
         # compute lambda return
         lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
@@ -89,7 +99,7 @@ class VGCtTrainer:
             "critic_loss" : critic_loss.item(),
             "mean_lambda_return_train" : torch.mean(lambda_returns.detach()).item(),
             "mean_value_train" : torch.mean(torch.stack(rollout_value).detach()).item(),
-            "accumulate_reward_train" : torch.sum(torch.stack(rollout_reward).detach()).item() / obs.shape[0],
+            "accumulate_reward_train" : torch.sum(torch.stack(rollout_reward).detach()).item() / lambda_returns.shape[1],
         }
 
         self.actor_optim.zero_grad()
@@ -142,11 +152,12 @@ class VGCtTrainer:
         print(tabulate(info.items(), numalign="right"))
         
     def test_on_world_model(self):
-        obs = self.parse_batch(next(self.observation_iter))
+        states = self.parse_batch(next(self.observation_iter))
+
         with torch.no_grad():
             # rollout world model
             rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
-                world_model_rollout(self.world_model, self.controller, reset_obs=obs, horizon=self.config['horizon']+1, mode='test')
+                world_model_rollout(self.world_model, self.controller, reset_state=states, horizon=self.config['horizon']+1, mode='test')
 
             lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
                                     _gamma=self.config['gamma'], _lambda=self.config['lambda'])
@@ -157,7 +168,7 @@ class VGCtTrainer:
             info = {
                 "mean_lambda_return_eval" : torch.mean(torch.stack(lambda_returns).detach()).item(),
                 "mean_value_eval" : torch.mean(torch.stack(rollout_value)).item(),
-                "accumulate_reward_eval" : torch.sum(torch.stack(rollout_reward)).item() / obs.shape[0],
+                "accumulate_reward_eval" : torch.sum(torch.stack(rollout_reward)).item() / lambda_returns[0].shape[0],
             }
 
             return rollout_obs, info

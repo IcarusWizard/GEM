@@ -38,8 +38,9 @@ def get_default_controller_config():
 
     # training config
     config.seed = -1 
-    config.batch_size = 128
-    config.image_per_file = 2
+    config.batch_size = 50
+    config.batch_length = 50
+    config.fix_start = False
     config.preload = True
     config.gpu = '0'
     config.workers = 9999
