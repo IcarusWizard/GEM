@@ -153,6 +153,7 @@ class VGCtTrainer:
         
     def test_on_world_model(self):
         states = self.parse_batch(next(self.observation_iter))
+        states = states[-16:]
 
         with torch.no_grad():
             # rollout world model
