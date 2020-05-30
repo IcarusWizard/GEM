@@ -169,11 +169,22 @@ class SerialAgentTrainer:
         return obs, action, reward    
 
     def test_on_world_model(self):
-        obs = self.buffer.sample_image(16)[0].to(self.device)
+        batch = next(self.data_iter)
+        obs, action, reward = self.parse_batch(batch)
+
+        T, B = obs.shape[:2]
+        obs = obs.view(T * B, *obs.shape[2:])
+        emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
+
+        predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
+
+        states = prediction['state'].detach()
+        states = states.view(-1, states.shape[-1])
+        states = states[-16:]
         with torch.no_grad():
             # rollout world model
             rollout_state, rollout_action, rollout_reward, rollout_value, rollout_value_dist = \
-                world_model_rollout(self.world_model, self.controller, reset_obs=obs, horizon=self.config['horizon']+1, mode='test')
+                world_model_rollout(self.world_model, self.controller, reset_state=states, horizon=self.config['horizon']+1, mode='test')
 
             lambda_returns = compute_lambda_return(rollout_reward[:-1], rollout_value[:-1], bootstrap=rollout_value[-1], 
                                     _gamma=self.config['gamma'], _lambda=self.config['lambda'])

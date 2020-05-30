@@ -56,11 +56,12 @@ def real_env_rollout(real_env, world_model, controller, action_func=lambda actio
             # step real env
             _action = action[0].cpu().numpy()
             next_obs, reward, done, info = real_env.step(_action)
+            reward = torch.as_tensor(reward, dtype=dtype, device=device).unsqueeze(dim=0).unsqueeze(dim=0).contiguous()
             next_obs = next_obs['image']
             next_obs = torch.as_tensor(next_obs / 255.0 - 0.5, dtype=dtype, device=device).permute(2, 0, 1).unsqueeze(dim=0).contiguous()
 
             # step world model
-            next_state, predict_reward, _, _ = world_model.step(action, next_obs)
+            next_state, predict_reward, _, _ = world_model.step(action, next_obs, reward)
 
             rollout_state.append(state)
             rollout_obs.append(obs)

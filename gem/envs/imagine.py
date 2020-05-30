@@ -23,12 +23,12 @@ class Imagine:
     def action_space(self):
         return gym.spaces.Box(-1, 1, [self.action_dim], dtype=np.float32)
 
-    def step(self, action, obs=None):
+    def step(self, action, obs=None, reward=None):
         if obs is not None:
             emb = self.sensor.encode(obs)
         else:
             emb = None
-        self.state, reward = self.predictor.step(self.state, action, emb)
+        self.state, reward = self.predictor.step(self.state, action, emb, reward)
 
         info = None
         done = False
@@ -41,9 +41,11 @@ class Imagine:
         else:
             return self.state, reward, done, info
 
-    def reset(self, obs):
+    def reset(self, obs, reward=None):
         emb = self.sensor.encode(obs)
-        self.state = self.predictor.reset(emb)
+        if reward is None:
+            reward = torch.zeros(emb.shape[0], 1, dtype=emb.dtype, device=emb.device)
+        self.state = self.predictor.reset(emb, reward)
         if self.with_emb:
             return torch.cat([emb, self.state], dim=1)
         else:

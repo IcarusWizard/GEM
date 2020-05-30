@@ -26,7 +26,7 @@ class RSSM(torch.nn.Module):
 
         self.rnn_cell = torch.nn.GRUCell(stoch_dim + action_dim, hidden_dim)
 
-        self.post = MLPDecoder(hidden_dim + emb_dim, stoch_dim, **decoder_config)
+        self.post = MLPDecoder(hidden_dim + emb_dim + 1, stoch_dim, **decoder_config)
         self.prior = MLPDecoder(hidden_dim, stoch_dim, **decoder_config)
 
         self.emb_pre = MLPDecoder(self.state_dim, emb_dim, dist_type='fix_std', **decoder_config)
@@ -52,6 +52,7 @@ class RSSM(torch.nn.Module):
         """
         
         T, B = emb.shape[:2]
+        whole_emb = torch.cat([emb, reward], dim=2)
 
         h, s = self._reset(emb[0])
         state = torch.cat([h, s], dim=1)
@@ -61,7 +62,7 @@ class RSSM(torch.nn.Module):
         prior_dists = []
 
         for i in range(T):
-            _emb = emb[i]
+            _emb = whole_emb[i]
             _action = action[i]
 
             h, s, posterior_dist, prior_dist = self.obs_step(h, s, _action, _emb)
@@ -173,17 +174,18 @@ class RSSM(torch.nn.Module):
         return PredictorTrainer
 
     # API for environmental rollout
-    def reset(self, emb):
+    def reset(self, emb, reward):
         h, s = self._reset(emb)
-        h, s, _, _ = self.obs_step(h, s, torch.zeros(emb.shape[0], self.action_dim, dtype=emb.dtype, device=emb.device), emb)
+        h, s, _, _ = self.obs_step(h, s, torch.zeros(emb.shape[0], self.action_dim, dtype=emb.dtype, device=emb.device), 
+                                   torch.cat([emb, reward], dim=1))
         return torch.cat([h, s], dim=1)
 
-    def step(self, pre_state, action, emb=None):
+    def step(self, pre_state, action, emb=None, reward=None):
         h, s = torch.split(pre_state, [self.hidden_dim, self.stoch_dim], dim=1)
         if emb is None:
             h, s, _ = self.img_step(h, s, action)
         else:
-            h, s, _, _ = self.obs_step(h, s, action, emb)
+            h, s, _, _ = self.obs_step(h, s, action, torch.cat([emb, reward], dim=-1))
         next_state = torch.cat([h, s], dim=1)
         reward = self.reward_pre(next_state).mode()
         return next_state, reward
