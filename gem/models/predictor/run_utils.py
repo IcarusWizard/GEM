@@ -20,6 +20,8 @@ def config_predictor(config):
         predictor_param['stoch_dim'] = config['state_stoch_dim']
         predictor_param['free_nats'] = config['free_nats']
         predictor_param['kl_scale'] = config['kl_scale']
+    elif config['predictor'] == 'RAR':
+        predictor_param['warm_up'] = config['warm_up']
 
     module = importlib.import_module('gem.models.predictor')
     model_class = getattr(module, config['predictor'])

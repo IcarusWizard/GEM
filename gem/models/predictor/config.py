@@ -12,6 +12,7 @@ def get_default_predictor_config():
     config.predictor = 'RSSM'
     config.sensor_checkpoint = 'VAE_dmc_finger_spin'
     config.state_hidden_dim = 256
+    config.warm_up = 10 # warm up step of rar
     config.state_stoch_dim = 32
     config.free_nats = 3.0
     config.kl_scale = 1.0

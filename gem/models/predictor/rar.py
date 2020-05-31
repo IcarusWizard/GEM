@@ -5,13 +5,14 @@ from gem.modules.decoder import MLPDecoder, ActionDecoder
 from .trainer import PredictorTrainer
 
 class RAR(torch.nn.Module):
-    def __init__(self, emb_dim, action_dim, hidden_dim, action_mimic=False, actor_mode='continuous', predict_reward=True, 
+    def __init__(self, emb_dim, action_dim, hidden_dim, warm_up=10, action_mimic=False, actor_mode='continuous', predict_reward=True, 
                  decoder_config={"hidden_layers" : 2, "features" : 512, "activation" : 'elu'}):
         super().__init__()
 
         self.emb_dim = emb_dim
         self.action_dim = action_dim
         self.hidden_dim = hidden_dim
+        self.warm_up = warm_up
         self.action_minic = action_mimic
         self.predict_reward = predict_reward
         self.decoder_config = decoder_config
@@ -28,6 +29,8 @@ class RAR(torch.nn.Module):
         if self.predict_reward:
             self.reward_pre = MLPDecoder(hidden_dim, 1, dist_type='fix_std', **decoder_config)
 
+        self.last_emb = None
+
     def forward(self, emb, action, reward=None, use_emb_loss=True):
         """
             Inputs are all tensor[T, B, *]
@@ -43,12 +46,14 @@ class RAR(torch.nn.Module):
         for i in range(T):
             states.append(state)
 
-            _emb = emb[i]
             _action = action[i]
 
             emb_dist = self.emb_pre(state)
 
-            _emb = emb_dist.mode()
+            if i < self.warm_up:
+                _emb = emb[i]
+            else:
+                _emb = emb_dist.mode()
 
             state = self.rnn_cell(torch.cat([_emb, _action], dim=1), state) # compute next state
 
