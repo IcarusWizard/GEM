@@ -64,10 +64,10 @@ class RAR(torch.nn.Module):
         states = torch.cat(states, dim=0).contiguous()
         emb_dist = self.emb_pre(states)
         prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
-        if use_emb_loss:
-            emb_loss = - torch.sum(emb_dist.log_prob(emb.view(T * B, *emb.shape[2:]))) / (T * B)
-            info['emb_loss'] = emb_loss.item()
-            loss += emb_loss
+        # if use_emb_loss:
+        emb_loss = - torch.sum(emb_dist.log_prob(emb.view(T * B, *emb.shape[2:]))) / (T * B)
+        info['emb_loss'] = emb_loss.item()
+        loss += emb_loss
 
         if self.action_minic:
             action_dist = self.action_pre(states[:-B])
@@ -133,7 +133,7 @@ class RAR(torch.nn.Module):
         return state 
 
     def step(self, pre_state, action, emb=None):
-        if self.last_emb is None:
+        if self.last_emb is None or not self.last_emb.shape[0] == action.shape[0]:
             last_emb = self.emb_pre(pre_state).mode()
         else:
             last_emb = self.last_emb
