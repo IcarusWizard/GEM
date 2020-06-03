@@ -16,7 +16,7 @@ def config_predictor(config):
         }
     }
 
-    if config['predictor'] == 'RSSM':
+    if config['predictor'] == 'RSSM' or config['predictor'] == 'RSAR':
         predictor_param['stoch_dim'] = config['state_stoch_dim']
         predictor_param['free_nats'] = config['free_nats']
         predictor_param['kl_scale'] = config['kl_scale']
