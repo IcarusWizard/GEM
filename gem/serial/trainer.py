@@ -66,7 +66,7 @@ class SerialAgentTrainer:
             with torch.no_grad():
                 obs = obs.view(T * B, *obs.shape[2:])
                 emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
-            predictor_loss, prediction, predictor_info = self.predictor(emb, action, reward, use_emb_loss=False)
+            predictor_loss, prediction, predictor_info = self.predictor(emb, action, reward)
             model_loss = sensor_loss + predictor_loss
             info = sensor_info
             info.update(predictor_info)
