@@ -58,23 +58,35 @@ class SerialAgentTrainer:
 
     def get_loss_info(self, batch):
         obs, action, reward = self.parse_batch(batch)
-
         T, B = obs.shape[:2]
-        obs = obs.view(T * B, *obs.shape[2:])
-        emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
-        predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
+        if self.config.get('separate', False):
+            _obs = obs[0]
+            sensor_loss, sensor_info = self.sensor(_obs)
+            with torch.no_grad():
+                obs = obs.view(T * B, *obs.shape[2:])
+                emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
+            predictor_loss, prediction, predictor_info = self.predictor(emb, action, reward, use_emb_loss=False)
+            model_loss = sensor_loss + predictor_loss
+            info = sensor_info
+            info.update(predictor_info)
+            info['model_loss'] = model_loss.item()
+        else:
+            obs = obs.view(T * B, *obs.shape[2:])
+            emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
-        pre_emb = prediction['emb'].view(T * B, -1)
-        pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
-        reconstruction_loss = - pre_obs_dist.log_prob(obs)
-        reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+            predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
 
-        model_loss = reconstruction_loss + predictor_loss
-        info.update({
-            "model_loss" : model_loss.item(),
-            "renconstruction_loss" : reconstruction_loss.item(),
-        })
+            pre_emb = prediction['emb'].view(T * B, -1)
+            pre_obs_dist = self.sensor.decode(pre_emb, output_dist=True)
+            reconstruction_loss = - pre_obs_dist.log_prob(obs)
+            reconstruction_loss = torch.mean(torch.sum(reconstruction_loss, dim=(1, 2, 3)))
+
+            model_loss = reconstruction_loss + predictor_loss
+            info.update({
+                "model_loss" : model_loss.item(),
+                "renconstruction_loss" : reconstruction_loss.item(),
+            })
 
         states = prediction['state'].detach()
         states = states.view(-1, states.shape[-1])

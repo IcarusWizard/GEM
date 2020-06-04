@@ -15,6 +15,8 @@ def get_default_serial_agent_config():
     config.update(get_default_controller_config())
     config.update(get_default_world_model_config())
 
+    config.separate = True
+
     # overwrite training config
     config.batch_size = 50
     config.batch_length = 50
