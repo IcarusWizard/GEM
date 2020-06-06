@@ -17,12 +17,10 @@ def world_model_rollout(world_model, controller, reset_obs=None, reset_state=Non
         action_dist = controller.get_action_dist(state.detach())
         action = action_dist.sample() if mode == 'train' else action_dist.mode()
 
-        next_state, reward, done, info = world_model.step(action)
+        state, reward, done, info = world_model.step(action)
         rollout_state.append(state)
         rollout_action.append(action)
         rollout_reward.append(reward)
-
-        state = next_state
 
     rollout_value_dist = [controller.get_critic_dist(state) for state in rollout_state]
     rollout_value = [controller.get_critic_target(state) for state in rollout_state]
