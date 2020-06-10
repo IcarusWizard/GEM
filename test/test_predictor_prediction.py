@@ -94,7 +94,75 @@ if __name__ == '__main__':
         obs = obs.view(T * B, *obs.shape[2:])
         emb = sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
-        predictor_loss, prediction, info = predictor(emb, action, reward, use_emb_loss=False)
+        if config['predictor'] == 'RAR':
+            states = []
+
+            # compute state1 by assuming emb -1 is the same as emb 0, and take no action 
+            state = predictor.rnn_cell(torch.cat([emb[0], torch.zeros_like(action[0])], dim=1)) 
+
+            for i in range(T):
+                states.append(state)
+
+                _action = action[i]
+
+                emb_dist = predictor.emb_pre(state)
+
+                if i < 10:
+                    _emb = emb[i]
+                else:
+                    _emb = emb_dist.mode()
+
+                state = predictor.rnn_cell(torch.cat([_emb, _action], dim=1), state) # compute next state
+
+            prediction = {"state" : torch.stack(states)}
+
+            states = torch.cat(states, dim=0).contiguous()
+            emb_dist = predictor.emb_pre(states)
+            prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
+            
+            reward_dist = predictor.reward_pre(states)
+            prediction['reward'] = reward_dist.mode().view(T, B, 1)
+
+        elif config['predictor'] == 'RSAR':
+            h, s = predictor._reset(emb[0])
+
+            states = []
+            posterior_dists = []
+            prior_dists = []
+
+            for i in range(T):
+                if i < 10:
+                    h, s, _ = predictor.obs_step(h, s, action[i], emb[max(i-1, 0)])
+                else:
+                    h, s, _ = predictor.img_step(h, s, action[i])
+
+                state = torch.cat([h, s], dim=1)
+                states.append(state)
+        elif config['predictor'] == 'RSSM':
+            h, s = predictor._reset(emb[0])
+            state = torch.cat([h, s], dim=1)
+
+            states = []
+
+            for i in range(T):
+                _action = action[i]
+                if i < T:
+                    _emb = emb[i]
+                    h, s, _, _ = predictor.obs_step(h, s, _action, _emb)
+                else:
+                    h, s, _ = predictor.img_step(h, s, _action)
+
+                state = torch.cat([h, s], dim=1)
+                states.append(state)
+
+        prediction = {"state" : torch.stack(states)}
+
+        states = torch.cat(states, dim=0).contiguous()
+        emb_dist = predictor.emb_pre(states)
+        prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
+        
+        reward_dist = predictor.reward_pre(states)
+        prediction['reward'] = reward_dist.mode().view(T, B, 1)
 
         pre_emb = prediction['emb']
         pre_emb = pre_emb.view(T * B, pre_emb.shape[-1])
