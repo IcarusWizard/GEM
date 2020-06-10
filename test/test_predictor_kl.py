@@ -54,14 +54,14 @@ if __name__ == '__main__':
         model_checkpoint = torch.load(os.path.join(ModelDir, args.model_checkpoint + '.pt'), map_location='cpu')
         config = model_checkpoint['config']
         sensor, predictor = get_world_model_by_checkpoint(model_checkpoint)
-        filename = 'model_' + args.args.model_checkpoint+ '.txt'
+        filename = 'model_' + args.model_checkpoint + '.txt'
     elif len(args.predictor_checkpoint) > 0:
         predictor_checkpoint = torch.load(os.path.join(PredictorDir, args.predictor_checkpoint + '.pt'), map_location='cpu')
         config = predictor_checkpoint['config']
         predictor = get_predictor_by_checkpoint(predictor_checkpoint)
         sensor_checkpoint = torch.load(os.path.join(SensorDir, config['sensor_checkpoint'] + '.pt'), map_location='cpu')
         sensor = get_sensor_by_checkpoint(sensor_checkpoint)
-        filename = 'predictor_' + args.args.predictor_checkpoint+ '.txt'
+        filename = 'predictor_' + args.predictor_checkpoint + '.txt'
     else:
         raise ValueError('at least one checkpoint should be given')
     
