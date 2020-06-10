@@ -14,7 +14,7 @@ from gem.models.mix.run_utils import get_world_model_by_checkpoint
 from gem.models.mix.config import ModelDir
 from gem.serial.run_utils import get_serial_agent_by_checkpoint
 from gem.serial.config import SerialDir
-from gem.utils import step_loader, select_gpus, tsplot
+from gem.utils import step_loader, select_gpus, tsplot, create_dir
 
 from gem.data import load_predictor_dataset
 from gem.data.wrapper import multiple_wrappers, Split, ToTensor
@@ -29,6 +29,9 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, default='0')
     parser.add_argument('--batchs', type=int, default=100)
     args = parser.parse_args()
+
+    output_folder = 'outputs/predictor/kl'
+    create_dir(output_folder)
 
     if len(args.serial_agent_checkpoint) > 0:
         model_checkpoint = torch.load(os.path.join(SerialDir, args.serial_agent_checkpoint + '.pt'), map_location='cpu')
@@ -45,20 +48,24 @@ if __name__ == '__main__':
         isampler = InfiniteSampler(dataset)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=config['batch_size'], sampler=isampler, 
                                                   num_workers=os.cpu_count(), pin_memory=True)
+
+        filename = 'serial_agent_' + args.serial_agent_checkpoint + '.txt'
     elif len(args.model_checkpoint) > 0:
         model_checkpoint = torch.load(os.path.join(ModelDir, args.model_checkpoint + '.pt'), map_location='cpu')
         config = model_checkpoint['config']
         sensor, predictor = get_world_model_by_checkpoint(model_checkpoint)
+        filename = 'model_' + args.args.model_checkpoint+ '.txt'
     elif len(args.predictor_checkpoint) > 0:
         predictor_checkpoint = torch.load(os.path.join(PredictorDir, args.predictor_checkpoint + '.pt'), map_location='cpu')
         config = predictor_checkpoint['config']
         predictor = get_predictor_by_checkpoint(predictor_checkpoint)
         sensor_checkpoint = torch.load(os.path.join(SensorDir, config['sensor_checkpoint'] + '.pt'), map_location='cpu')
         sensor = get_sensor_by_checkpoint(sensor_checkpoint)
+        filename = 'predictor_' + args.args.predictor_checkpoint+ '.txt'
     else:
         raise ValueError('at least one checkpoint should be given')
     
-    assert config['predictor'] == 'RSSM', 'currently only RSSM support kl test'
+    assert not config['predictor'] == 'RAR', 'RAR is not supported in kl test'
     predictor.requires_grad_(False)
     sensor.requires_grad_(False)
 
@@ -89,6 +96,7 @@ if __name__ == '__main__':
     
     kls = torch.cat(kls, dim=1)
     kls = kls.numpy().T
+    np.savetxt(os.path.join(output_folder, filename), kls)
 
     fig, ax = plt.subplots()
     tsplot(ax, kls)
