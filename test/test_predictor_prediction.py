@@ -66,8 +66,7 @@ if __name__ == '__main__':
         filename = 'predictor_' + args.predictor_checkpoint + '_{}.txt'
     else:
         raise ValueError('at least one checkpoint should be given')
-    
-    assert not config['predictor'] == 'RAR', 'RAR is not supported in kl test'
+
     predictor.requires_grad_(False)
     sensor.requires_grad_(False)
 
