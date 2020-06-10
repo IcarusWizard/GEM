@@ -114,15 +114,6 @@ if __name__ == '__main__':
 
                 state = predictor.rnn_cell(torch.cat([_emb, _action], dim=1), state) # compute next state
 
-            prediction = {"state" : torch.stack(states)}
-
-            states = torch.cat(states, dim=0).contiguous()
-            emb_dist = predictor.emb_pre(states)
-            prediction['emb'] = emb_dist.mode().view(T, B, *emb.shape[2:])
-            
-            reward_dist = predictor.reward_pre(states)
-            prediction['reward'] = reward_dist.mode().view(T, B, 1)
-
         elif config['predictor'] == 'RSAR':
             h, s = predictor._reset(emb[0])
 
@@ -138,6 +129,7 @@ if __name__ == '__main__':
 
                 state = torch.cat([h, s], dim=1)
                 states.append(state)
+                
         elif config['predictor'] == 'RSSM':
             h, s = predictor._reset(emb[0])
             state = torch.cat([h, s], dim=1)
