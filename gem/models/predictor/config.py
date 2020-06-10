@@ -14,7 +14,7 @@ def get_default_predictor_config():
     config.state_hidden_dim = 256
     config.warm_up = 10 # warm up step of rar
     config.state_stoch_dim = 32
-    config.free_nats = 3.0
+    config.free_nats = 0.0
     config.kl_scale = 1.0
     config.decoder_hidden_layers = 2
     config.decoder_features = 256

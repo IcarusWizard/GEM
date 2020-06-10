@@ -59,12 +59,11 @@ class SerialAgentTrainer:
     def get_loss_info(self, batch):
         obs, action, reward = self.parse_batch(batch)
         T, B = obs.shape[:2]
+        obs = obs.view(T * B, *obs.shape[2:])
 
         if self.config.get('separate', False):
-            _obs = obs[0]
-            sensor_loss, sensor_info = self.sensor(_obs)
+            sensor_loss, sensor_info = self.sensor(obs)
             with torch.no_grad():
-                obs = obs.view(T * B, *obs.shape[2:])
                 emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
             predictor_loss, prediction, predictor_info = self.predictor(emb, action, reward)
             model_loss = sensor_loss + predictor_loss
@@ -72,7 +71,6 @@ class SerialAgentTrainer:
             info.update(predictor_info)
             info['model_loss'] = model_loss.item()
         else:
-            obs = obs.view(T * B, *obs.shape[2:])
             emb = self.sensor.encode(obs, output_dist=True).mode().view(T, B, -1)
 
             predictor_loss, prediction, info = self.predictor(emb, action, reward, use_emb_loss=False)
