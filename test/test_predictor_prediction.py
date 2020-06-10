@@ -118,8 +118,6 @@ if __name__ == '__main__':
             h, s = predictor._reset(emb[0])
 
             states = []
-            posterior_dists = []
-            prior_dists = []
 
             for i in range(T):
                 if i < 10:
@@ -129,7 +127,7 @@ if __name__ == '__main__':
 
                 state = torch.cat([h, s], dim=1)
                 states.append(state)
-                
+
         elif config['predictor'] == 'RSSM':
             h, s = predictor._reset(emb[0])
             state = torch.cat([h, s], dim=1)
@@ -138,7 +136,7 @@ if __name__ == '__main__':
 
             for i in range(T):
                 _action = action[i]
-                if i < T:
+                if i < 10:
                     _emb = emb[i]
                     h, s, _, _ = predictor.obs_step(h, s, _action, _emb)
                 else:
